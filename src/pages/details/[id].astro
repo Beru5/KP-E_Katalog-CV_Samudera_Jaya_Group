@@ -1,0 +1,154 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../lib/db.js';
+
+const { id } = Astro.params;
+
+let mobil = null;
+try {
+  const [rows] = await pool.query('SELECT * FROM Mobil WHERE id_mobil = ?', [id]);
+  const dataMobil = rows;
+
+  if (dataMobil && dataMobil.length > 0) {
+    mobil = dataMobil[0];
+  }
+} catch (error) {
+  console.error("Gagal mengambil detail mobil:", error);
+}
+
+if (!mobil) {
+  return Astro.redirect('/404');
+}
+
+let images = [];
+try {
+  images = JSON.parse(mobil.gambar_mobil || '[]');
+} catch {
+  images = mobil.gambar_mobil ? [mobil.gambar_mobil] : [`/${mobil.id_mobil}.png`];
+}
+if (images.length === 0) {
+  images = [`/${mobil.id_mobil}.png`];
+}
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Detail {mobil.brand_mobil} {mobil.model_mobil}</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; background: #f9f9f9; }
+    .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #0076ff; font-weight: bold; }
+    .detail-container { background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; max-width: 600px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .detail-container h1 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    
+    .detail-slider { position: relative; width: 100%; height: 350px; overflow: hidden; border-radius: 6px; margin-bottom: 20px; background: #000; }
+    .detail-track { display: flex; height: 100%; transition: transform 0.3s ease-in-out; width: 100%; }
+    .detail-slide { min-width: 100%; height: 100%; }
+    .detail-slide img { width: 100%; height: 100%; object-fit: cover; }
+    .slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+    .slider-btn:hover { background: rgba(0,0,0,0.8); }
+    .slider-prev { left: 15px; }
+    .slider-next { right: 15px; }
+
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+    .info-table td { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .info-table td:first-child { font-weight: bold; color: #666; width: 40%; }
+    .btn-wishlist { background: #ff4757; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; }
+    .btn-wishlist:hover { background: #ff2a3b; }
+  </style>
+</head>
+<body>
+
+  <a href="/" class="back-link">&larr; Kembali ke Katalog Utama</a>
+
+  <div class="detail-container">
+    
+    <div class="detail-slider">
+      <div class="detail-track" id="detailTrack" data-index="0">
+        {images.map((img) => (
+          <div class="detail-slide">
+            <img src={img} alt={mobil.model_mobil} />
+          </div>
+        ))}
+      </div>
+      {images.length > 1 && (
+        <>
+          <button class="slider-btn slider-prev" id="prevSlideBtn">&#10094;</button>
+          <button class="slider-btn slider-next" id="nextSlideBtn">&#10095;</button>
+        </>
+      )}
+    </div>
+
+    <h1>{mobil.brand_mobil} {mobil.model_mobil}</h1>
+    
+    <table class="info-table">
+      <tr><td>Kategori</td><td>{mobil.kategori_mobil}</td></tr>
+      <tr><td>Warna</td><td>{mobil.warna_mobil}</td></tr>
+      <tr><td>Transmisi</td><td>{mobil.transmisi}</td></tr>
+      <tr><td>Harga</td><td><strong>Rp {Number(mobil.harga).toLocaleString('id-ID')}</strong></td></tr>
+      <tr><td>Jarak Tempuh</td><td>{Number(mobil.jumlah_km).toLocaleString('id-ID')} km</td></tr>
+      <tr><td>Status Pajak</td><td>{mobil.status_pajak}</td></tr>
+    </table>
+
+    <h3>Deskripsi Mobil:</h3>
+    <p style="line-height: 1.6; color: #555;">{mobil.deskripsi_mobil || 'Tidak ada deskripsi.'}</p>
+
+    <button class="btn-wishlist" id="btnWishlist">Tambahkan ke Wishlist</button>
+  </div>
+
+  <script define:vars={{ mobil }}>
+    const track = document.getElementById('detailTrack');
+    const prevBtn = document.getElementById('prevSlideBtn');
+    const nextBtn = document.getElementById('nextSlideBtn');
+    
+    if (track && prevBtn && nextBtn) {
+      const slides = track.querySelectorAll('.detail-slide');
+      let currentIndex = 0;
+
+      function updateSlide(index) {
+        if (index < 0) currentIndex = slides.length - 1;
+        else if (index >= slides.length) currentIndex = 0;
+        else currentIndex = index;
+
+        track.style.transform = `translateX(-${currentIndex * 100}%)`;
+      }
+
+      nextBtn.addEventListener('click', () => updateSlide(currentIndex + 1));
+      prevBtn.addEventListener('click', () => updateSlide(currentIndex - 1));
+    }
+
+    const btn = document.getElementById('btnWishlist');
+
+    function updateButtonState() {
+      const currentWishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+      const isExist = currentWishlist.some(item => String(item.id_mobil) === String(mobil.id_mobil));
+
+      if (isExist) {
+        btn.textContent = 'Sudah di Wishlist';
+        btn.style.background = '#2ed573'; 
+      } else {
+        btn.textContent = 'Tambahkan ke Wishlist';
+        btn.style.background = '#ff4757'; 
+      }
+    }
+
+    updateButtonState();
+
+    btn.addEventListener('click', () => {
+      let currentWishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+      const isExist = currentWishlist.some(item => String(item.id_mobil) !== String(mobil.id_mobil));
+
+      if (isExist) {
+        currentWishlist = currentWishlist.filter(item => String(item.id_mobil) !== String(mobil.id_mobil));
+      } else {
+        currentWishlist.push(mobil);
+      }
+
+      localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
+      updateButtonState();
+    });
+  </script>
+
+</body>
+</html>

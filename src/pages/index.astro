@@ -1,0 +1,525 @@
+---
+// @ts-nocheck
+import { pool } from '../lib/db.js';
+
+const [rows] = await pool.query('SELECT * FROM Mobil');
+const databaseMobil = rows;
+
+const [rowsPromo] = await pool.query(`
+  SELECT * FROM Promo 
+  WHERE CURRENT_DATE() BETWEEN promo_mulai AND promo_berakhir
+  ORDER BY promo_mulai DESC
+`);
+const databasePromo = rowsPromo;
+
+const allPrices = databaseMobil.map(m => Number(m.harga) || 0);
+const minPriceDB = allPrices.length > 0 ? Math.min(...allPrices) : 0;
+const maxPriceDB = allPrices.length > 0 ? Math.max(...allPrices) : 1000000000;
+
+const uniqueCategories = [...new Set(databaseMobil.map(m => m.kategori_mobil).filter(Boolean))];
+const uniqueBrands = [...new Set(databaseMobil.map(m => m.brand_mobil).filter(Boolean))];
+const uniqueTransmissions = [...new Set(databaseMobil.map(m => m.transmisi).filter(Boolean))];
+
+function formatMaskedPrice(harga, visibleDigits = 3) {
+  const numHarga = Number(harga) || 0;
+  const fullFormatted = numHarga.toLocaleString('id-ID');
+  const digitsToShow = Number(visibleDigits) || 3;
+  
+  let countDigits = 0;
+  let result = '';
+  for (let i = 0; i < fullFormatted.length; i++) {
+    const char = fullFormatted[i];
+    if (/[0-9]/.test(char)) {
+      countDigits++;
+      if (countDigits > digitsToShow) {
+        result += 'x';
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+  }
+  return 'Rp ' + result;
+}
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Katalog Mobil</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; background: #f9f9f9; }
+    
+    .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; flex: 1; min-width: 250px; }
+    .btn-filter-modal { background: #333; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; }
+    .btn-filter-modal:hover { background: #555; }
+    .btn-wishlist-nav { background: #ff4757; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: flex; align-items: center; }
+    
+    .carousel-container {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto 30px auto;
+      overflow: hidden;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      background: #000;
+    }
+    .carousel-track { display: flex; transition: transform 0.4s ease-in-out; width: 100%; }
+    .carousel-slide { min-width: 100%; position: relative; height: 320px; }
+    .carousel-slide img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
+    .carousel-caption { position: absolute; bottom: 0; left: 0; right: 0; padding: 25px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); color: white; }
+    .carousel-caption h2 { margin: 0 0 8px 0; font-size: 24px; }
+    .carousel-caption p { margin: 0 0 12px 0; font-size: 14px; color: #ddd; }
+    .btn-promo-detail { display: inline-block; background: #ff4757; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; }
+    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.5); color: white; border: none; font-size: 24px; padding: 12px 16px; cursor: pointer; border-radius: 50%; z-index: 10; }
+    .carousel-btn:hover { background: rgba(0, 0, 0, 0.8); }
+    .prev-btn { left: 15px; }
+    .next-btn { right: 15px; }
+    .carousel-dots { position: absolute; bottom: 15px; right: 25px; display: flex; gap: 8px; }
+    .dot { width: 10px; height: 10px; background: rgba(255, 255, 255, 0.5); border-radius: 50%; cursor: pointer; }
+    .dot.active { background: white; }
+
+    /* CARD CAROUSEL / SLIDER */
+    .card-slider { position: relative; width: 100%; height: 150px; overflow: hidden; border-radius: 4px; margin-bottom: 10px; background: #eee; }
+    .card-track { display: flex; height: 100%; transition: transform 0.3s ease-in-out; width: 100%; }
+    .card-slide { min-width: 100%; height: 100%; }
+    .card-slide img { width: 100%; height: 100%; object-fit: cover; }
+    .card-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 5; }
+    .card-btn:hover { background: rgba(0,0,0,0.8); }
+    .card-prev { left: 5px; }
+    .card-next { right: 5px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .card { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; display: flex; flex-direction: column; }
+    .btn { display: inline-block; background: #0076ff; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; margin-top: auto; text-align: center; }
+    
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+    .modal-header h3 { margin: 0; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #888; }
+    
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #444; }
+    .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    
+    .price-range { display: flex; gap: 10px; }
+    .price-range input[type="number"] { width: 50%; }
+    .slider-container { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row label { width: 45px; font-size: 12px; color: #666; font-weight: normal; margin: 0; }
+    .slider-row input[type="range"] { flex: 1; cursor: pointer; }
+    
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 0; border-top: 1px solid #eee; }
+    .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
+    .checkbox-group label { margin: 0; font-size: 15px; cursor: pointer; display: inline-block; color: #333; }
+
+    .modal-footer { display: flex; gap: 10px; margin-top: 25px; }
+    .btn-apply { background: #0076ff; color: white; border: none; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
+    .btn-reset { background: #f1f2f6; color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>CV Samudera Jaya Group</h1>
+  
+  <div class="toolbar">
+    <input type="text" id="searchName" class="search-input" placeholder="Cari nama atau model mobil dengan cepat..." />
+    <button id="openModalBtn" class="btn-filter-modal">Sort & Filter</button>
+    <a href="/wishlist" class="btn-wishlist-nav">Wishlist</a>
+  </div>
+
+  <!-- CAROUSEL PROMO -->
+  {databasePromo.length > 0 && (
+    <div class="carousel-container">
+      <button class="carousel-btn prev-btn" id="prevPromoBtn">&#10094;</button>
+      <button class="carousel-btn next-btn" id="nextPromoBtn">&#10095;</button>
+      
+      <div class="carousel-track" id="carouselTrack">
+        {databasePromo.map((promo) => (
+          <div class="carousel-slide">
+            <img src={promo.promo_gambar || '/default-promo.png'} alt={promo.promo_judul} />
+            <div class="carousel-caption">
+              <span>{promo.promo_kategori}</span>
+              <h2>{promo.promo_judul}</h2>
+              <p>Berlaku hingga: {new Date(promo.promo_berakhir).toLocaleDateString('id-ID')}</p>
+              <a href={`/promo/${promo.promo_id}`} class="btn-promo-detail">Lihat Detail Promo</a>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="carousel-dots" id="carouselDots">
+        {databasePromo.map((_, index) => (
+          <span class={`dot ${index === 0 ? 'active' : ''}`} data-index={index}></span>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <h2>Produk Kami</h2>
+  <div class="grid" id="carGrid">
+    {databaseMobil.map((mobil) => {
+      let images = [];
+      try {
+        images = JSON.parse(mobil.gambar_mobil || '[]');
+      } catch {
+        images = mobil.gambar_mobil ? [mobil.gambar_mobil] : ['/default-car.png'];
+      }
+      if (images.length === 0) images = ['/default-car.png'];
+
+      return (
+        <div class="card" 
+             data-nama={`${mobil.brand_mobil} ${mobil.model_mobil}`.toLowerCase()} 
+             data-harga={mobil.harga} 
+             data-brand={mobil.brand_mobil}
+             data-kategori={mobil.kategori_mobil}
+             data-transmisi={mobil.transmisi}
+             data-pajak={mobil.status_pajak}>
+          
+          <!-- SLIDER GAMBAR MOBIL -->
+          <div class="card-slider">
+            <div class="card-track" data-index="0">
+              {images.map(img => (
+                <div class="card-slide">
+                  <img src={img} alt={mobil.model_mobil} />
+                </div>
+              ))}
+            </div>
+            {images.length > 1 && (
+              <>
+                <button class="card-btn card-prev" onclick="moveCardSlide(this, -1)">&#10094;</button>
+                <button class="card-btn card-next" onclick="moveCardSlide(this, 1)">&#10095;</button>
+              </>
+            )}
+          </div>
+          
+          <h3 style="margin-top: 0;">{mobil.brand_mobil} {mobil.model_mobil}</h3>
+          
+          <p style="font-size: 18px; color: #ff4757; margin: 5px 0;">
+            <strong>{formatMaskedPrice(mobil.harga, mobil.digit_tampil)}</strong>
+          </p>
+
+          <p style="font-size: 14px; color: #555;">
+            {mobil.kategori_mobil} | {mobil.transmisi} | {mobil.warna_mobil} <br/>
+            Pajak: {mobil.status_pajak}
+          </p>
+          <a href={`/details/${mobil.id_mobil}`} class="btn">Lihat Detail</a>
+        </div>
+      );
+    })}
+  </div>
+
+  <!-- Pop-up filter -->
+  <div id="filterModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Sort & Filter</h3>
+        <button id="closeModalBtn" class="close-btn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label>Urutkan Berdasarkan</label>
+        <select id="sortPrice" class="form-control">
+          <option value="default">Default</option>
+          <option value="asc">Harga Terendah - Tertinggi</option>
+          <option value="desc">Harga Tertinggi - Terendah</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Rentang Harga (Rp)</label>
+        <div class="price-range">
+          <input type="number" id="minPrice" class="form-control" placeholder="Min" value={minPriceDB} min={minPriceDB} max={maxPriceDB} />
+          <input type="number" id="maxPrice" class="form-control" placeholder="Max" value={maxPriceDB} min={minPriceDB} max={maxPriceDB} />
+        </div>
+        <div class="slider-container">
+          <div class="slider-row">
+            <label>Min:</label>
+            <input type="range" id="minPriceSlider" min={minPriceDB} max={maxPriceDB} step="1000000" value={minPriceDB} />
+          </div>
+          <div class="slider-row">
+            <label>Max:</label>
+            <input type="range" id="maxPriceSlider" min={minPriceDB} max={maxPriceDB} step="1000000" value={maxPriceDB} />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Merek (Brand)</label>
+        <select id="brandFilter" class="form-control">
+          <option value="all">Semua Merek</option>
+          {uniqueBrands.map(brand => <option value={brand}>{brand}</option>)}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Kategori</label>
+        <select id="categoryFilter" class="form-control">
+          <option value="all">Semua Kategori</option>
+          {uniqueCategories.map(cat => <option value={cat}>{cat}</option>)}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Transmisi</label>
+        <select id="transmissionFilter" class="form-control">
+          <option value="all">Semua Transmisi</option>
+          {uniqueTransmissions.map(trans => <option value={trans}>{trans}</option>)}
+        </select>
+      </div>
+
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="taxFilterCheckbox" />
+        <label for="taxFilterCheckbox">Pajak Hidup</label>
+      </div>
+
+      <div class="modal-footer">
+        <button id="resetBtn" class="btn-reset">Reset Filter</button>
+        <button id="applyBtn" class="btn-apply">Terapkan Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    declare global {
+      interface Window {
+        moveCardSlide: (button: HTMLElement, direction: number) => void;
+      }
+    }
+
+    window.moveCardSlide = function(button: HTMLElement, direction: number) {
+      const slider = button.closest('.card-slider');
+      if (!slider) return;
+      const track = slider.querySelector('.card-track') as HTMLElement;
+      const slides = track.querySelectorAll('.card-slide');
+      let index = parseInt(track.getAttribute('data-index') || '0');
+      
+      index = index + direction;
+      if (index < 0) index = slides.length - 1;
+      if (index >= slides.length) index = 0;
+      
+      track.setAttribute('data-index', index.toString());
+      track.style.transform = `translateX(-${index * 100}%)`;
+    };
+
+    const track = document.getElementById('carouselTrack') as HTMLElement | null;
+    const slides = document.querySelectorAll('.carousel-slide');
+    const dots = document.querySelectorAll('.dot');
+    const prevBtn = document.getElementById('prevPromoBtn');
+    const nextBtn = document.getElementById('nextPromoBtn');
+
+    let currentIndex = 0;
+    const totalSlides = slides.length;
+
+    function updateCarousel(index: number) {
+      if (!track) return;
+      currentIndex = index;
+      if (currentIndex < 0) currentIndex = totalSlides - 1;
+      if (currentIndex >= totalSlides) currentIndex = 0;
+
+      track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentIndex);
+      });
+    }
+
+    if (nextBtn) nextBtn.addEventListener('click', () => updateCarousel(currentIndex + 1));
+    if (prevBtn) prevBtn.addEventListener('click', () => updateCarousel(currentIndex - 1));
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const idx = parseInt(target.getAttribute('data-index') || '0');
+        updateCarousel(idx);
+      });
+    });
+
+    if (totalSlides > 1) {
+      setInterval(() => {
+        updateCarousel(currentIndex + 1);
+      }, 5000);
+    }
+
+    const modal = document.getElementById('filterModal') as HTMLElement | null;
+    const openModalBtn = document.getElementById('openModalBtn') as HTMLButtonElement | null;
+    const closeModalBtn = document.getElementById('closeModalBtn') as HTMLButtonElement | null;
+    const applyBtn = document.getElementById('applyBtn') as HTMLButtonElement | null;
+    const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
+
+    const searchInput = document.getElementById('searchName') as HTMLInputElement | null;
+    const sortPrice = document.getElementById('sortPrice') as HTMLSelectElement | null;
+    
+    const minPrice = document.getElementById('minPrice') as HTMLInputElement | null;
+    const maxPrice = document.getElementById('maxPrice') as HTMLInputElement | null;
+    const minPriceSlider = document.getElementById('minPriceSlider') as HTMLInputElement | null;
+    const maxPriceSlider = document.getElementById('maxPriceSlider') as HTMLInputElement | null;
+    
+    const brandFilter = document.getElementById('brandFilter') as HTMLSelectElement | null;
+    const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement | null;
+    const transmissionFilter = document.getElementById('transmissionFilter') as HTMLSelectElement | null;
+    const taxFilterCheckbox = document.getElementById('taxFilterCheckbox') as HTMLInputElement | null;
+    
+    const carGrid = document.getElementById('carGrid') as HTMLElement | null;
+    let cardsArray = Array.from(document.querySelectorAll('.card')) as HTMLElement[];
+
+    if (openModalBtn && modal) openModalBtn.addEventListener('click', () => modal.style.display = 'flex');
+    if (closeModalBtn && modal) closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+    window.addEventListener('click', (e) => {
+      if (e.target === modal && modal) modal.style.display = 'none';
+    });
+
+    if (minPrice && maxPrice && minPriceSlider && maxPriceSlider) {
+      minPriceSlider.addEventListener('input', () => {
+        if (parseInt(minPriceSlider.value) > parseInt(maxPriceSlider.value)) {
+          minPriceSlider.value = maxPriceSlider.value;
+        }
+        minPrice.value = minPriceSlider.value;
+        applyFilters(); 
+      });
+      
+      maxPriceSlider.addEventListener('input', () => {
+        if (parseInt(maxPriceSlider.value) < parseInt(minPriceSlider.value)) {
+          maxPriceSlider.value = minPriceSlider.value;
+        }
+        maxPrice.value = maxPriceSlider.value;
+        applyFilters();
+      });
+
+      minPrice.addEventListener('input', () => {
+        minPriceSlider.value = minPrice.value;
+        applyFilters();
+      });
+
+      maxPrice.addEventListener('input', () => {
+        maxPriceSlider.value = maxPrice.value;
+        applyFilters();
+      });
+    }
+
+    if (taxFilterCheckbox) {
+      taxFilterCheckbox.addEventListener('change', applyFilters);
+    }
+
+    function applyFilters() {
+      if (!searchInput || !sortPrice || !minPrice || !maxPrice || !brandFilter || !categoryFilter || !transmissionFilter || !carGrid) return;
+
+      const searchValue = searchInput.value.toLowerCase();
+      const sortValue = sortPrice.value;
+      
+      const defaultMin = minPriceSlider ? parseFloat(minPriceSlider.min) : 0;
+      const defaultMax = maxPriceSlider ? parseFloat(maxPriceSlider.max) : Infinity;
+      
+      const minVal = parseFloat(minPrice.value) || defaultMin;
+      const maxVal = parseFloat(maxPrice.value) || defaultMax;
+      
+      const brandVal = brandFilter.value;
+      const catVal = categoryFilter.value;
+      const transVal = transmissionFilter.value;
+      const isTaxHidupOnly = taxFilterCheckbox ? taxFilterCheckbox.checked : false;
+
+      const filterState = {
+        search: searchValue,
+        sort: sortValue,
+        min: minVal,
+        max: maxVal,
+        brand: brandVal,
+        cat: catVal,
+        trans: transVal,
+        tax: isTaxHidupOnly
+      };
+      sessionStorage.setItem('katalogFilterState', JSON.stringify(filterState));
+
+      cardsArray.forEach(card => {
+        const nama = card.getAttribute('data-nama') || '';
+        const harga = parseFloat(card.getAttribute('data-harga') || '0');
+        const brand = card.getAttribute('data-brand') || '';
+        const cat = card.getAttribute('data-kategori') || '';
+        const trans = card.getAttribute('data-transmisi') || '';
+        const tax = card.getAttribute('data-pajak') || '';
+
+        const matchSearch = nama.includes(searchValue);
+        const matchPrice = harga >= minVal && harga <= maxVal;
+        const matchBrand = brandVal === 'all' || brand === brandVal;
+        const matchCat = catVal === 'all' || cat === catVal;
+        const matchTrans = transVal === 'all' || trans === transVal;
+        const matchTax = !isTaxHidupOnly || tax.toLowerCase().includes('hidup');
+
+        if (matchSearch && matchPrice && matchBrand && matchCat && matchTrans && matchTax) {
+          card.style.display = 'flex'; 
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      if (sortValue !== 'default') {
+        cardsArray.sort((a, b) => {
+          const hargaA = parseFloat(a.getAttribute('data-harga') || '0');
+          const hargaB = parseFloat(b.getAttribute('data-harga') || '0');
+          return sortValue === 'asc' ? hargaA - hargaB : hargaB - hargaA;
+        });
+      } else {
+        cardsArray.sort((a, b) => {
+          const namaA = a.getAttribute('data-nama') || '';
+          const namaB = b.getAttribute('data-nama') || '';
+          return namaA.localeCompare(namaB);
+        });
+      }
+
+      carGrid.innerHTML = '';
+      cardsArray.forEach(card => carGrid.appendChild(card));
+    }
+
+    function loadSavedFilters() {
+      const saved = sessionStorage.getItem('katalogFilterState');
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (searchInput) searchInput.value = state.search;
+        if (sortPrice) sortPrice.value = state.sort;
+        if (minPrice) minPrice.value = state.min;
+        if (maxPrice) maxPrice.value = state.max;
+        if (minPriceSlider) minPriceSlider.value = state.min;
+        if (maxPriceSlider) maxPriceSlider.value = state.max;
+        if (brandFilter) brandFilter.value = state.brand;
+        if (categoryFilter) categoryFilter.value = state.categoryFilter || state.cat;
+        if (transmissionFilter) transmissionFilter.value = state.trans;
+        if (taxFilterCheckbox) taxFilterCheckbox.checked = state.tax;
+      }
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (!sortPrice || !minPrice || !maxPrice || !brandFilter || !categoryFilter || !transmissionFilter || !minPriceSlider || !maxPriceSlider) return;
+        
+        sortPrice.value = 'default';
+        brandFilter.value = 'all';
+        categoryFilter.value = 'all';
+        transmissionFilter.value = 'all';
+        
+        minPrice.value = minPriceSlider.min;
+        minPriceSlider.value = minPriceSlider.min;
+        maxPrice.value = maxPriceSlider.max;
+        maxPriceSlider.value = maxPriceSlider.max;
+        
+        if (taxFilterCheckbox) taxFilterCheckbox.checked = false;
+        sessionStorage.removeItem('katalogFilterState');
+        applyFilters();
+      });
+    }
+
+    if (applyBtn) applyBtn.addEventListener('click', () => {
+      applyFilters();
+      if (modal) modal.style.display = 'none';
+    });
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+
+    loadSavedFilters();
+    applyFilters();
+  </script>
+
+</body>
+</html>

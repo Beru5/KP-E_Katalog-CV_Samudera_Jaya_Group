@@ -1,0 +1,255 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../../lib/db.js';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const sessionId = Astro.cookies.get('admin_session')?.value;
+if (!sessionId) return Astro.redirect('/admin/login');
+
+let errorMessage = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    
+    let id_mobil;
+    let isUnique = false;
+    
+    while (!isUnique) {
+      id_mobil = Math.floor(100000 + Math.random() * 900000);
+      const [existing] = await pool.query('SELECT id_mobil FROM Mobil WHERE id_mobil = ?', [id_mobil]);
+      if (existing.length === 0) {
+        isUnique = true;
+      }
+    }
+
+    let brand_mobil = formData.get('brand_mobil')?.toString().trim();
+    const brand_lainnya = formData.get('brand_lainnya')?.toString().trim();
+    if (brand_mobil === 'Lainnya' && brand_lainnya) {
+      brand_mobil = brand_lainnya;
+    }
+
+    const model_mobil = formData.get('model_mobil')?.toString().trim();
+    
+    const rawHarga = formData.get('harga')?.toString().replace(/\./g, '') || '0';
+    const harga = Number(rawHarga) || 0;
+
+    const digit_tampil = Number(formData.get('digit_tampil')) || 3;
+    const kategori_mobil = formData.get('kategori_mobil')?.toString().trim();
+    const transmisi = formData.get('transmisi')?.toString().trim();
+    const warna_mobil = formData.get('warna_mobil')?.toString().trim();
+    const status_pajak = formData.get('status_pajak')?.toString().trim();
+    
+    const rawKm = formData.get('jumlah_km')?.toString().replace(/\./g, '') || '0';
+    const jumlah_km = Number(rawKm) || 0;
+
+    const deskripsi_mobil = formData.get('deskripsi_mobil')?.toString().trim();
+
+    if (isNaN(harga) || isNaN(jumlah_km)) {
+      throw new Error("Harga dan Jumlah KM harus berupa angka yang valid.");
+    }
+
+    const imageFiles = formData.getAll('gambar_mobil');
+    const savedFileNames = [];
+    const uploadDir = path.resolve('./public/uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    for (const file of imageFiles) {
+      if (file && typeof file === 'object' && file.size > 0) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+        fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+        savedFileNames.push(`/uploads/${fileName}`);
+      }
+    }
+
+    if (savedFileNames.length === 0) {
+      throw new Error("Minimal unggah 1 foto mobil.");
+    }
+
+    const gambar_mobil_json = JSON.stringify(savedFileNames);
+
+    await pool.query(`
+      INSERT INTO Mobil (id_mobil, brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil, digit_tampil)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id_mobil, brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil_json, digit_tampil]);
+
+    return Astro.redirect('/admin/mobil');
+  } catch (err) {
+    console.error('DETAIL ERROR DATABASE:', err);
+    errorMessage = `Gagal menyimpan data: ${err.message || 'Terjadi kesalahan pada database.'}`;
+  }
+}
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Tambah Mobil - Admin Panel</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
+    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; position: fixed; display: flex; flex-direction: column; }
+    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
+    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
+    .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
+    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
+    
+    .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
+    .form-card { background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #444; }
+    .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+    .form-control:read-only { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; }
+    .btn-submit { background: #0076ff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; }
+    .btn-submit:hover { background: #005bb5; }
+    .error { color: #ff4757; margin-bottom: 15px; background: #ffeaa7; padding: 10px; border-radius: 4px; font-size: 14px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/mobil" class="active">Kelola Mobil</a>
+    <a href="/admin/promoKelola">Kelola Promo</a>
+    <a href="/admin/logout" class="logout">Logout</a>
+  </div>
+
+  <div class="main-content">
+    <h1>Tambah Info Mobil Baru</h1>
+    <div class="form-card">
+      {errorMessage && <div class="error">{errorMessage}</div>}
+      <form method="POST" enctype="multipart/form-data">
+
+        <div class="form-group">
+          <label>Brand Mobil</label>
+          <select id="brandSelect" name="brand_mobil" class="form-control" required>
+            <option value="">Pilih Brand</option>
+            <option value="Toyota">Toyota</option>
+            <option value="Honda">Honda</option>
+            <option value="Suzuki">Suzuki</option>
+            <option value="Daihatsu">Daihatsu</option>
+            <option value="Mitsubishi">Mitsubishi</option>
+            <option value="Hyundai">Hyundai</option>
+            <option value="Wuling">Wuling</option>
+            <option value="Lainnya">Lainnya..</option>
+          </select>
+        </div>
+
+        <div class="form-group hidden" id="brandLainnyaGroup">
+          <label>Masukkan Brand Lainnya</label>
+          <input type="text" id="brandLainnyaInput" name="brand_lainnya" class="form-control" placeholder="Nama brand baru..." />
+        </div>
+
+        <div class="form-group">
+          <label>Model Mobil</label>
+          <input type="text" name="model_mobil" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Harga (Rp)</label>
+          <input type="text" id="hargaInput" name="harga" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Digit Depan Harga yang Ditampilkan</label>
+          <input type="number" name="digit_tampil" class="form-control" value="3" min="1" max="15" required />
+        </div>
+
+        <div class="form-group">
+          <label>Kategori Mobil</label>
+          <select name="kategori_mobil" class="form-control" required>
+            <option value="">Pilih Kategori</option>
+            <option value="SUV">SUV</option>
+            <option value="MPV">MPV</option>
+            <option value="Sedan">Sedan</option>
+            <option value="Hatchback">Hatchback</option>
+            <option value="City Car">City Car</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Transmisi</label>
+          <select name="transmisi" class="form-control">
+            <option value="Automatic">Automatic</option>
+            <option value="Manual">Manual</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Warna Mobil</label>
+          <input type="text" name="warna_mobil" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label>Status Pajak</label>
+          <select name="status_pajak" class="form-control" required>
+            <option value="Hidup">Hidup</option>
+            <option value="Mati">Mati</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Jumlah KM</label>
+          <input type="text" id="kmInput" name="jumlah_km" class="form-control"/>
+        </div>
+
+        <div class="form-group">
+          <label>Foto Mobil (Bisa pilih banyak sekaligus)</label>
+          <input type="file" name="gambar_mobil" class="form-control" multiple accept="image/*" required />
+        </div>
+
+        <div class="form-group">
+          <label>Deskripsi Mobil</label>
+          <textarea name="deskripsi_mobil" class="form-control" rows="4"></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Simpan Mobil Baru</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const brandSelect = document.getElementById('brandSelect') as HTMLSelectElement;
+    const brandLainnyaGroup = document.getElementById('brandLainnyaGroup') as HTMLElement;
+    const brandLainnyaInput = document.getElementById('brandLainnyaInput') as HTMLInputElement;
+
+    function toggleBrandLainnya() {
+      if (brandSelect.value === 'Lainnya') {
+        brandLainnyaGroup.classList.remove('hidden');
+        brandLainnyaInput.required = true;
+      } else {
+        brandLainnyaGroup.classList.add('hidden');
+        brandLainnyaInput.required = false;
+        brandLainnyaInput.value = '';
+      }
+    }
+
+    toggleBrandLainnya();
+    brandSelect.addEventListener('change', toggleBrandLainnya);
+
+    function formatNumberInput(inputElement: HTMLInputElement) {
+      inputElement.addEventListener('input', () => {
+        let rawValue = inputElement.value.replace(/\D/g, '');
+        if (rawValue) {
+          inputElement.value = Number(rawValue).toLocaleString('id-ID');
+        } else {
+          inputElement.value = '';
+        }
+      });
+    }
+
+    const hargaInput = document.getElementById('hargaInput') as HTMLInputElement;
+    const kmInput = document.getElementById('kmInput') as HTMLInputElement;
+
+    if (hargaInput) formatNumberInput(hargaInput);
+    if (kmInput) formatNumberInput(kmInput);
+  </script>
+</body>
+</html>

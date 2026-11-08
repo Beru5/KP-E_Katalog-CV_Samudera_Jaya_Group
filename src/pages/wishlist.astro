@@ -1,0 +1,136 @@
+---
+// @ts-nocheck
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Wishlist</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; background: #f9f9f9; }
+    
+    .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #0076ff; font-weight: bold; }
+    .back-link:hover { text-decoration: underline; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .card { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; display: flex; flex-direction: column; }
+    
+    .btn-detail { display: inline-block; background: #0076ff; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; text-align: center; margin-top: auto; }
+    .btn-detail:hover { background: #0056b3; }
+    
+    .btn-remove { background: #ff4757; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+    .btn-remove:hover { background: #ff2a3b; }
+
+    .empty-state { text-align: center; padding: 50px 20px; background: white; border-radius: 8px; border: 1px solid #ddd; margin-top: 20px; }
+    .btn-browse { display: inline-block; background: #0076ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+  <a href="/" class="back-link">&larr; Kembali ke Katalog Utama</a>
+  
+  <h1>Wishlist</h1>
+
+  <div id="emptyMessage" class="empty-state" style="display: none;">
+    <h3>Wishlist Anda Masih Kosong</h3>
+    <p>Belum ada mobil yang Anda tambahkan ke daftar keinginan.</p>
+    <a href="/" class="btn-browse">Cari Mobil Sekarang</a>
+  </div>
+
+  <div class="grid" id="wishlistGrid"></div>
+
+  <script>
+    function formatMaskedPrice(harga: number | string, visibleDigits: number = 3) {
+      const numHarga = Number(harga) || 0;
+      const fullFormatted = numHarga.toLocaleString('id-ID');
+      const digitsToShow = Number(visibleDigits) || 3;
+      
+      let countDigits = 0;
+      let result = '';
+      for (let i = 0; i < fullFormatted.length; i++) {
+        const char = fullFormatted[i];
+        if (/[0-9]/.test(char)) {
+          countDigits++;
+          if (countDigits > digitsToShow) {
+            result += 'x';
+          } else {
+            result += char;
+          }
+        } else {
+          result += char;
+        }
+      }
+      return 'Rp ' + result;
+    }
+
+    function renderWishlist() {
+      const wishlistGrid = document.getElementById('wishlistGrid');
+      const emptyMessage = document.getElementById('emptyMessage');
+      
+      const wishlist: any[] = JSON.parse(localStorage.getItem('wishlist') || '[]');
+
+      if (!wishlistGrid || !emptyMessage) return;
+
+      if (wishlist.length === 0) {
+        emptyMessage.style.display = 'block';
+        wishlistGrid.innerHTML = '';
+        return;
+      }
+
+      emptyMessage.style.display = 'none';
+      wishlistGrid.innerHTML = '';
+
+      wishlist.forEach((mobil: any) => {
+        let images = [];
+        try {
+          images = JSON.parse(mobil.gambar_mobil || '[]');
+        } catch {
+          images = mobil.gambar_mobil ? [mobil.gambar_mobil] : ['/default-car.png'];
+        }
+        if (images.length === 0) images = ['/default-car.png'];
+        const thumbnail = images[0];
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${thumbnail}" alt="${mobil.model_mobil}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 10px;" />
+          <h3 style="margin-top: 0;">${mobil.brand_mobil} ${mobil.model_mobil}</h3>
+          
+          <p style="font-size: 18px; color: #ff4757; margin: 5px 0;">
+            <strong>${formatMaskedPrice(mobil.harga, mobil.digit_tampil)}</strong>
+          </p>
+
+          <p style="font-size: 14px; color: #555;">
+            ${mobil.kategori_mobil} | ${mobil.transmisi} | ${mobil.warna_mobil} <br/>
+            Pajak: ${mobil.status_pajak}
+          </p>
+          <a href="/details/${mobil.id_mobil}" class="btn-detail">Lihat Detail</a>
+          <button class="btn-remove" data-id="${mobil.id_mobil}">Hapus dari Wishlist</button>
+        `;
+        wishlistGrid.appendChild(card);
+      });
+
+      document.querySelectorAll('.btn-remove').forEach((button) => {
+        button.addEventListener('click', (e: Event) => {
+          const target = e.currentTarget as HTMLButtonElement;
+          const idToRemove = target.getAttribute('data-id');
+          if (idToRemove) {
+            removeFromWishlist(idToRemove);
+          }
+        });
+      });
+    }
+
+    function removeFromWishlist(id: string) {
+      let wishlist: any[] = JSON.parse(localStorage.getItem('wishlist') || '[]');
+      wishlist = wishlist.filter((item: any) => String(item.id_mobil) !== String(id));
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      
+      renderWishlist();
+    }
+
+    renderWishlist();
+  </script>
+
+</body>
+</html>

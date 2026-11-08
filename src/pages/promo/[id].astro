@@ -1,0 +1,85 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../lib/db.js';
+
+const { id } = Astro.params;
+
+let promo = null;
+try {
+  const [rows] = await pool.query('SELECT * FROM Promo WHERE promo_id = ?', [id]);
+  if (rows && rows.length > 0) {
+    promo = rows[0];
+  }
+} catch (error) {
+  console.error("Gagal mengambil detail promo:", error);
+}
+
+if (!promo) {
+  return Astro.redirect('/404');
+}
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Detail Promo - {promo.promo_judul}</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; background: #f9f9f9; }
+    .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #0076ff; }
+    .detail-container { 
+      background: white; 
+      padding: 30px; 
+      border-radius: 8px; 
+      border: 1px solid #ddd; 
+      max-width: 700px; 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+      margin: 0 auto;
+    }
+    .detail-container h1 { margin-top: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .badge {
+      display: inline-block;
+      background: #ff4757;
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .info-table td { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .info-table td:first-child { font-weight: bold; color: #666; width: 35%; }
+  </style>
+</head>
+<body>
+
+  <a href="/" class="back-link">&larr; Kembali ke Utama</a>
+
+  <div class="detail-container">
+    <img 
+      src={promo.promo_gambar || `/../public/${promo.promo_gambar}.jpg`} alt={`${promo.promo_gambar}`} 
+      style="width: 100%; height: 350px; object-fit: cover; border-radius: 6px;" 
+    />
+    
+    <h1>{promo.promo_judul}</h1>
+    <span class="badge">{promo.promo_kategori}</span>
+
+    <table class="info-table">
+      <tr>
+        <td>Tanggal Mulai</td>
+        <td>{new Date(promo.promo_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+      </tr>
+      <tr>
+        <td>Tanggal Berakhir</td>
+        <td>{new Date(promo.promo_berakhir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+      </tr>
+    </table>
+
+    <h3>Syarat & Ketentuan Promo:</h3>
+    <p style="line-height: 1.6; color: #555; whitespace: pre-line;">
+      {promo.promo_deskripsi || 'Tidak ada deskripsi detail promo.'}
+    </p>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../lib/db.js';
+
+const sessionId = Astro.cookies.get('admin_session')?.value;
+
+if (!sessionId) {
+  return Astro.redirect('/admin/login');
+}
+
+const [sessionRows] = await pool.query(`
+  SELECT * FROM Session s 
+  JOIN Admin a ON s.admin_id = a.admin_id 
+  WHERE s.session_id = ? AND s.expiration_time > NOW()
+`, [sessionId]);
+
+if (sessionRows.length === 0) {
+  Astro.cookies.delete('admin_session', { path: '/' });
+  return Astro.redirect('/admin/login');
+}
+
+const currentAdmin = sessionRows[0];
+
+const [mobilRows] = await pool.query('SELECT COUNT(*) as total FROM Mobil');
+const [promoRows] = await pool.query('SELECT COUNT(*) as total FROM Promo');
+const totalMobil = mobilRows[0].total;
+const totalPromo = promoRows[0].total;
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard Admin - CV Samudera Jaya Group</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
+    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
+    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
+    .sidebar a:hover { color: white; }
+    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; }
+    
+    .main-content { flex: 1; padding: 40px; box-sizing: border-box; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+    .stat-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .stat-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; }
+    .stat-card p { margin: 0; font-size: 24px; font-weight: bold; color: #333; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/mobil">Kelola Mobil</a>
+    <a href="/admin/promoKelola">Kelola Promo</a>
+    <a href="/admin/logout" class="logout">Logout</a>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>Dashboard</h1>
+      <p>Selamat datang, <strong>{currentAdmin.username}</strong></p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Mobil Terdaftar</h3>
+        <p>{totalMobil}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Promo Aktif</h3>
+        <p>{totalPromo}</p>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
