@@ -1,0 +1,132 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../../lib/db.js';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const sessionId = Astro.cookies.get('admin_session')?.value;
+if (!sessionId) return Astro.redirect('/admin/login');
+
+let errorMessage = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    
+    const promo_judul = formData.get('promo_judul')?.toString().trim();
+    const promo_kategori = formData.get('promo_kategori')?.toString().trim();
+    const promo_mulai = formData.get('promo_mulai')?.toString().trim();
+    const promo_berakhir = formData.get('promo_berakhir')?.toString().trim();
+    const promo_deskripsi = formData.get('promo_deskripsi')?.toString().trim();
+
+    if (!promo_judul || !promo_kategori || !promo_mulai || !promo_berakhir) {
+      throw new Error("Judul, Kategori, Tanggal Mulai, dan Tanggal Berakhir wajib diisi.");
+    }
+
+    const imageFile = formData.get('promo_gambar');
+    let promo_gambar_path = '/default-promo.png';
+
+    if (imageFile && typeof imageFile === 'object' && imageFile.size > 0) {
+      const uploadDir = path.resolve('./public/uploads/promo');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const buffer = Buffer.from(await imageFile.arrayBuffer());
+      const fileName = `promo-${Date.now()}-${imageFile.name.replace(/\s+/g, '_')}`;
+      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      promo_gambar_path = `/uploads/promo/${fileName}`;
+    }
+
+    await pool.query(`
+      INSERT INTO Promo (promo_judul, promo_kategori, promo_mulai, promo_berakhir, promo_gambar, promo_deskripsi)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [promo_judul, promo_kategori, promo_mulai, promo_berakhir, promo_gambar_path, promo_deskripsi]);
+
+    return Astro.redirect('/admin/promo');
+  } catch (err) {
+    console.error('DETAIL ERROR TAMBAH PROMO:', err);
+    errorMessage = `Gagal menyimpan promo: ${err.message || 'Terjadi kesalahan pada database.'}`;
+  }
+}
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Tambah Promo - Admin Panel</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
+    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; position: fixed; display: flex; flex-direction: column; }
+    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
+    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
+    .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
+    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
+    
+    .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
+    .form-card { background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #444; }
+    .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+    .btn-submit { background: #0076ff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; }
+    .btn-submit:hover { background: #005bb5; }
+    .error { color: #ff4757; margin-bottom: 15px; background: #ffeaa7; padding: 10px; border-radius: 4px; font-size: 14px; }
+    .btn-back { display: inline-block; margin-bottom: 20px; color: #666; text-decoration: none; font-size: 14px; }
+    .btn-back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/mobil">Kelola Mobil</a>
+    <a href="/admin/promo" class="active">Kelola Promo</a>
+    <a href="/admin/logout" class="logout">Logout</a>
+  </div>
+
+  <div class="main-content">
+    <a href="/admin/promo" class="btn-back">&larr; Kembali ke Kelola Promo</a>
+    <h1>Tambah Promo Baru</h1>
+    
+    <div class="form-card">
+      {errorMessage && <div class="error">{errorMessage}</div>}
+      <form method="POST" enctype="multipart/form-data">
+
+        <div class="form-group">
+          <label>Judul Promo</label>
+          <input type="text" name="promo_judul" class="form-control" placeholder="" required />
+        </div>
+
+        <div class="form-group">
+          <label>Kategori Promo</label>
+          <input type="text" name="promo_kategori" class="form-control" placeholder="" required />
+        </div>
+
+        <div class="form-group">
+          <label>Tanggal Mulai</label>
+          <input type="date" name="promo_mulai" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Tanggal Berakhir</label>
+          <input type="date" name="promo_berakhir" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Banner / Gambar Promo</label>
+          <input type="file" name="promo_gambar" class="form-control" accept="image/*" required />
+        </div>
+
+        <div class="form-group">
+          <label>Deskripsi & Syarat Ketentuan Promo</label>
+          <textarea name="promo_deskripsi" class="form-control" rows="5" placeholder=""></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Simpan Promo Baru</button>
+      </form>
+    </div>
+  </div>
+
+</body>
+</html>

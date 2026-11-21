@@ -36,6 +36,9 @@ if (Astro.request.method === 'POST') {
     const rawHarga = formData.get('harga')?.toString().replace(/\./g, '') || '0';
     const harga = Number(rawHarga) || 0;
 
+    const tahun_mobil = Number(formData.get('tahun_mobil')) || new Date().getFullYear();
+    const kapasitas_mesin = Number(formData.get('kapasitas_mesin')) || 0;
+
     const digit_tampil = Number(formData.get('digit_tampil')) || 3;
     const kategori_mobil = formData.get('kategori_mobil')?.toString().trim();
     const transmisi = formData.get('transmisi')?.toString().trim();
@@ -47,8 +50,8 @@ if (Astro.request.method === 'POST') {
 
     const deskripsi_mobil = formData.get('deskripsi_mobil')?.toString().trim();
 
-    if (isNaN(harga) || isNaN(jumlah_km)) {
-      throw new Error("Harga dan Jumlah KM harus berupa angka yang valid.");
+    if (isNaN(harga) || isNaN(jumlah_km) || isNaN(tahun_mobil) || isNaN(kapasitas_mesin)) {
+      throw new Error("Harga, Jumlah KM, Tahun, dan Kapasitas Mesin harus berupa angka yang valid.");
     }
 
     const imageFiles = formData.getAll('gambar_mobil');
@@ -75,9 +78,9 @@ if (Astro.request.method === 'POST') {
     const gambar_mobil_json = JSON.stringify(savedFileNames);
 
     await pool.query(`
-      INSERT INTO Mobil (id_mobil, brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil, digit_tampil)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id_mobil, brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil_json, digit_tampil]);
+      INSERT INTO Mobil (id_mobil, brand_mobil, model_mobil, harga, tahun_mobil, kapasitas_mesin, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil, digit_tampil)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id_mobil, brand_mobil, model_mobil, harga, tahun_mobil, kapasitas_mesin, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil_json, digit_tampil]);
 
     return Astro.redirect('/admin/mobil');
   } catch (err) {
@@ -104,7 +107,6 @@ if (Astro.request.method === 'POST') {
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #444; }
     .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-    .form-control:read-only { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; }
     .btn-submit { background: #0076ff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; }
     .btn-submit:hover { background: #005bb5; }
     .error { color: #ff4757; margin-bottom: 15px; background: #ffeaa7; padding: 10px; border-radius: 4px; font-size: 14px; }
@@ -117,7 +119,7 @@ if (Astro.request.method === 'POST') {
     <h2>Admin Panel</h2>
     <a href="/admin/dashboard">Dashboard</a>
     <a href="/admin/mobil" class="active">Kelola Mobil</a>
-    <a href="/admin/promoKelola">Kelola Promo</a>
+    <a href="/admin/promo">Kelola Promo</a>
     <a href="/admin/logout" class="logout">Logout</a>
   </div>
 
@@ -155,6 +157,16 @@ if (Astro.request.method === 'POST') {
         <div class="form-group">
           <label>Harga (Rp)</label>
           <input type="text" id="hargaInput" name="harga" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Tahun Mobil</label>
+          <input type="number" name="tahun_mobil" class="form-control" value="2023" min="1990" max="2030" required />
+        </div>
+
+        <div class="form-group">
+          <label>Kapasitas Mesin / CC (Integer)</label>
+          <input type="number" name="kapasitas_mesin" class="form-control" value="1500" min="500" max="10000" step="1" required />
         </div>
 
         <div class="form-group">

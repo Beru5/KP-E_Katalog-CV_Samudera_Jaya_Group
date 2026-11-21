@@ -46,18 +46,18 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
     
     .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
-    .btn-add { background: #2ed573; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; }
-    .btn-add:hover { background: #26af5f; }
+    .btn-add { background: #333; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; }
+    .btn-add:hover { background: #555; }
     
     table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
     th { background: #f1f2f6; color: #333; }
     
     .btn-action { padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; margin-right: 5px; display: inline-block; }
-    .btn-edit { background: #ffa502; color: white; }
-    .btn-delete { background: #ff4757; color: white; border: none; cursor: pointer; }
-    .btn-edit:hover { background: #e89400; }
-    .btn-delete:hover { background: #ff3344; }
+    .btn-edit { background: #333; color: white; }
+    .btn-delete { background: #333; color: white; border: none; cursor: pointer; }
+    .btn-edit:hover { background: #555; }
+    .btn-delete:hover { background: #555; }
   </style>
 </head>
 <body>
@@ -66,7 +66,7 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
     <h2>Admin Panel</h2>
     <a href="/admin/dashboard">Dashboard</a>
     <a href="/admin/mobil" class="active">Kelola Mobil</a>
-    <a href="/admin/promoKelola">Kelola Promo</a>
+    <a href="/admin/promo">Kelola Promo</a>
     <a href="/admin/logout" class="logout">Logout</a>
   </div>
 

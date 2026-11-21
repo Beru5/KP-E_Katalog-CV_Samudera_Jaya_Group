@@ -28,18 +28,21 @@ if (Astro.request.method === 'POST') {
 
     const model_mobil = formData.get('model_mobil')?.toString().trim();
     const harga = Number(formData.get('harga')) || 0;
-    const rawKm = formData.get('jumlah_km');
-    const jumlah_km = rawKm ? Number(rawKm) : 0;
+    
+    const rawKm = formData.get('jumlah_km')?.toString().replace(/\./g, '') || '0';
+    const jumlah_km = Number(rawKm) || 0;
+
+    const tahun_mobil = Number(formData.get('tahun_mobil')) || new Date().getFullYear();
+    const kapasitas_mesin = Number(formData.get('kapasitas_mesin')) || 0;
 
     const kategori_mobil = formData.get('kategori_mobil')?.toString().trim();
     const transmisi = formData.get('transmisi')?.toString().trim();
     const warna_mobil = formData.get('warna_mobil')?.toString().trim();
     const status_pajak = formData.get('status_pajak')?.toString().trim();
-    const kondisi_mobil = formData.get('kondisi_mobil')?.toString().trim();
     const deskripsi_mobil = formData.get('deskripsi_mobil')?.toString().trim();
 
-    if (isNaN(harga) || isNaN(jumlah_km)) {
-      throw new Error("Harga dan Jumlah KM harus berupa angka yang valid.");
+    if (isNaN(harga) || isNaN(jumlah_km) || isNaN(tahun_mobil) || isNaN(kapasitas_mesin)) {
+      throw new Error("Harga, Jumlah KM, Tahun, dan Kapasitas Mesin harus berupa angka yang valid.");
     }
 
     const imageFiles = formData.getAll('gambar_mobil');
@@ -63,9 +66,9 @@ if (Astro.request.method === 'POST') {
 
     await pool.query(`
       UPDATE Mobil 
-      SET brand_mobil=?, model_mobil=?, harga=?, kategori_mobil=?, transmisi=?, warna_mobil=?, status_pajak=?, kondisi_mobil=?, jumlah_km=?, deskripsi_mobil=?, gambar_mobil=?
+      SET brand_mobil=?, model_mobil=?, harga=?, kategori_mobil=?, transmisi=?, warna_mobil=?, status_pajak=?, jumlah_km=?, tahun_mobil=?, kapasitas_mesin=?, deskripsi_mobil=?, gambar_mobil=?
       WHERE id_mobil=?
-    `, [brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, kondisi_mobil, jumlah_km, deskripsi_mobil, gambar_mobil_json, id]);
+    `, [brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, tahun_mobil, kapasitas_mesin, deskripsi_mobil, gambar_mobil_json, id]);
 
     return Astro.redirect('/admin/mobil');
   } catch (err) {
@@ -116,7 +119,7 @@ try {
     <h2>Admin Panel</h2>
     <a href="/admin/dashboard">Dashboard</a>
     <a href="/admin/mobil" class="active">Kelola Mobil</a>
-    <a href="/admin/promoKelola">Kelola Promo</a>
+    <a href="/admin/promo">Kelola Promo</a>
     <a href="/admin/logout" class="logout">Logout</a>
   </div>
 
@@ -160,6 +163,16 @@ try {
         </div>
 
         <div class="form-group">
+          <label>Tahun Mobil</label>
+          <input type="number" name="tahun_mobil" class="form-control" value={mobil.tahun_mobil || 2020} min="1990" max="2030" required />
+        </div>
+
+        <div class="form-group">
+          <label>Kapasitas Mesin / CC (Integer)</label>
+          <input type="number" name="kapasitas_mesin" class="form-control" value={mobil.kapasitas_mesin || 1500} min="500" max="10000" step="1" required />
+        </div>
+
+        <div class="form-group">
           <label>Kategori Mobil</label>
           <select name="kategori_mobil" class="form-control" required>
             <option value="SUV" selected={mobil.kategori_mobil === 'SUV'}>SUV</option>
@@ -188,15 +201,6 @@ try {
           <select name="status_pajak" class="form-control" required>
             <option value="Hidup" selected={mobil.status_pajak === 'Hidup'}>Hidup</option>
             <option value="Mati" selected={mobil.status_pajak === 'Mati'}>Mati</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Kondisi Mobil</label>
-          <select name="kondisi_mobil" class="form-control" required>
-            <option value="Sangat Baik" selected={mobil.kondisi_mobil === 'Sangat Baik'}>Sangat Baik</option>
-            <option value="Baik" selected={mobil.kondisi_mobil === 'Baik'}>Baik</option>
-            <option value="Kurang Baik" selected={mobil.kondisi_mobil === 'Kurang Baik'}>Kurang Baik</option>
           </select>
         </div>
 

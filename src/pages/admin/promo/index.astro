@@ -1,0 +1,122 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../../lib/db.js';
+
+const sessionId = Astro.cookies.get('admin_session')?.value;
+if (!sessionId) return Astro.redirect('/admin/login');
+
+const [sessionRows] = await pool.query(`
+  SELECT * FROM Session s JOIN Admin a ON s.admin_id = a.admin_id 
+  WHERE s.session_id = ? AND s.expiration_time > NOW()
+`, [sessionId]);
+
+if (sessionRows.length === 0) {
+  Astro.cookies.delete('admin_session', { path: '/' });
+  return Astro.redirect('/admin/login');
+}
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const action = formData.get('action');
+  
+  if (action === 'delete') {
+    const promo_id = formData.get('promo_id');
+    if (promo_id) {
+      await pool.query('DELETE FROM Promo WHERE promo_id = ?', [promo_id]);
+      return Astro.redirect('/admin/promo');
+    }
+  }
+}
+
+const [promoRows] = await pool.query('SELECT * FROM Promo ORDER BY promo_id DESC');
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Kelola Promo - Admin Panel</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
+    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; position: fixed; display: flex; flex-direction: column; }
+    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
+    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
+    .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
+    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
+    
+    .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
+    .btn-add { background: #2ed573; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; }
+    .btn-add:hover { background: #26af5f; }
+    
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+    th { background: #f1f2f6; color: #333; }
+    
+    .promo-thumb { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
+    .btn-action { padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; margin-right: 5px; display: inline-block; }
+    .btn-edit { background: #ffa502; color: white; }
+    .btn-delete { background: #ff4757; color: white; border: none; cursor: pointer; }
+    .btn-edit:hover { background: #e89400; }
+    .btn-delete:hover { background: #ff3344; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/mobil">Kelola Mobil</a>
+    <a href="/admin/promo" class="active">Kelola Promo</a>
+    <a href="/admin/logout" class="logout">Logout</a>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>Kelola Informasi Promo</h1>
+      <a href="/admin/promo/create" class="btn-add">+ Tambah Promo Baru</a>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Banner</th>
+          <th>Judul Promo</th>
+          <th>Kategori</th>
+          <th>Mulai</th>
+          <th>Berakhir</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {promoRows.length === 0 ? (
+          <tr>
+            <td colspan="6" style="text-align: center; color: #777; padding: 30px;">Belum ada data promo yang tersedia.</td>
+          </tr>
+        ) : (
+          promoRows.map((promo) => (
+            <tr>
+              <td>
+                <img src={promo.promo_gambar || '/default-promo.png'} alt={promo.promo_judul} class="promo-thumb" />
+              </td>
+              <td><strong>{promo.promo_judul}</strong></td>
+              <td>{promo.promo_kategori}</td>
+              <td>{new Date(promo.promo_mulai).toLocaleDateString('id-ID')}</td>
+              <td>{new Date(promo.promo_berakhir).toLocaleDateString('id-ID')}</td>
+              <td>
+                <a href={`/admin/promo/${promo.promo_id}`} class="btn-action btn-edit">Edit</a>
+                <form method="POST" style="display:inline;" onsubmit="return confirm('Yakin ingin menghapus promo ini?');">
+                  <input type="hidden" name="action" value="delete" />
+                  <input type="hidden" name="promo_id" value={promo.promo_id} />
+                  <button type="submit" class="btn-action btn-delete">Delete</button>
+                </form>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
