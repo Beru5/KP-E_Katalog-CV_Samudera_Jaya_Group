@@ -57,31 +57,35 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     
     .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .search-input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; flex: 1; min-width: 250px; }
-    .btn-filter-modal { background: #333; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; }
-    .btn-filter-modal:hover { background: #555; }
-    .btn-spk-modal { background: #333; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; }
-    .btn-spk-modal:hover { background: #555; }
-    .btn-wishlist-nav { background: #333; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; display: flex; align-items: center; }
-    .btn-wishlist-nav:hover { background: #555; }
+    .btn-filter-modal, .btn-spk-modal, .btn-wishlist-nav {
+      background: #333; color: white; padding: 12px 20px; border: none; border-radius: 6px;
+      cursor: pointer; font-size: 15px; font-weight: bold; text-decoration: none;
+      display: inline-flex; align-items: center;
+    }
+    .btn-filter-modal:hover, .btn-spk-modal:hover, .btn-wishlist-nav:hover { background: #555; }
 
     .carousel-container {
-      position: relative;
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto 30px auto;
-      overflow: hidden;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      background: #000;
+      position: relative; width: 100%; max-width: 1200px; margin: 0 auto 30px auto;
+      overflow: hidden; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #000;
     }
     .carousel-track { display: flex; transition: transform 0.4s ease-in-out; width: 100%; }
     .carousel-slide { min-width: 100%; position: relative; height: 320px; }
     .carousel-slide img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
-    .carousel-caption { position: absolute; bottom: 0; left: 0; right: 0; padding: 25px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); color: white; }
+    .carousel-caption {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 25px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85)); color: white;
+    }
     .carousel-caption h2 { margin: 0 0 8px 0; font-size: 24px; }
     .carousel-caption p { margin: 0 0 12px 0; font-size: 14px; color: #ddd; }
-    .btn-promo-detail { display: inline-block; background: #ff4757; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; }
-    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.5); color: white; border: none; font-size: 24px; padding: 12px 16px; cursor: pointer; border-radius: 50%; z-index: 10; }
+    .btn-promo-detail {
+      display: inline-block; background: #ff4757; color: white; padding: 8px 16px;
+      border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;
+    }
+    .carousel-btn {
+      position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.5);
+      color: white; border: none; font-size: 24px; padding: 12px 16px; cursor: pointer;
+      border-radius: 50%; z-index: 10;
+    }
     .carousel-btn:hover { background: rgba(0, 0, 0, 0.8); }
     .prev-btn { left: 15px; }
     .next-btn { right: 15px; }
@@ -89,24 +93,45 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     .dot { width: 10px; height: 10px; background: rgba(255, 255, 255, 0.5); border-radius: 50%; cursor: pointer; }
     .dot.active { background: white; }
 
-    /* CARD CAROUSEL / SLIDER */
     .card-slider { position: relative; width: 100%; height: 150px; overflow: hidden; border-radius: 4px; margin-bottom: 10px; background: #eee; }
     .card-track { display: flex; height: 100%; transition: transform 0.3s ease-in-out; width: 100%; }
     .card-slide { min-width: 100%; height: 100%; }
     .card-slide img { width: 100%; height: 100%; object-fit: cover; }
-    .card-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 5; }
+    .card-btn {
+      position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5);
+      color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+      font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 5;
+    }
     .card-btn:hover { background: rgba(0,0,0,0.8); }
     .card-prev { left: 5px; }
     .card-next { right: 5px; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-    .card { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; display: flex; flex-direction: column; position: relative; }
-    .card .badge-spk { position: absolute; top: 10px; right: 10px; background: #2ed573; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; z-index: 6; }
-    .btn { display: inline-block; background: #0076ff; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; margin-top: auto; text-align: center; }
+    .card {
+      background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd;
+      display: flex; flex-direction: column; position: relative;
+    }
+    .card .badge-spk {
+      position: absolute; top: 10px; right: 10px; background: #2ed573; color: white;
+      padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; z-index: 6;
+    }
+    .btn {
+      display: inline-block; background: #0076ff; color: white; padding: 8px 12px;
+      text-decoration: none; border-radius: 4px; margin-top: auto; text-align: center;
+    }
     
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: white; padding: 25px; border-radius: 10px; width: 90%;
+      max-width: 550px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px;
+    }
     .modal-header h3 { margin: 0; }
     .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #888; }
     
@@ -126,64 +151,33 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     .btn-spk-submit { background: #2ed573; color: white; border: none; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
     .btn-reset { background: #f1f2f6; color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
     
-    .spk-section-title { font-size: 15px; font-weight: bold; color: #333; margin: 15px 0 10px 0; text-transform: uppercase; border-bottom: 2px solid #555; padding-bottom: 4px; }
+    .spk-section-title {
+      font-size: 15px; font-weight: bold; color: #333; margin: 15px 0 10px 0;
+      text-transform: uppercase; border-bottom: 2px solid #555; padding-bottom: 4px;
+    }
 
-    /* ACCORDION DROPDOWN UNTUK FILTER OPSIONAL */
     .accordion-header {
-      background: #f1f2f6;
-      color: #333;
-      padding: 12px 15px;
-      width: 100%;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-weight: bold;
-      text-align: left;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
+      background: #f1f2f6; color: #333; padding: 12px 15px; width: 100%;
+      border: 1px solid #ddd; border-radius: 6px; font-weight: bold; text-align: left;
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px;
     }
     .accordion-header:hover { background: #e4e7eb; }
     .accordion-body {
-      display: none;
-      padding: 15px 5px 5px 5px;
-      border: 1px solid #eee;
-      border-top: none;
-      border-radius: 0 0 6px 6px;
-      margin-bottom: 15px;
-      background: #fff;
+      display: none; padding: 15px 5px 5px 5px; border: 1px solid #eee;
+      border-top: none; border-radius: 0 0 6px 6px; margin-bottom: 15px; background: #fff;
     }
     .accordion-body.open { display: block; }
 
-    /* CRITERIA CHIPS FOR PRIORITY */
     .criteria-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
     .criterion-chip {
-      padding: 8px 14px;
-      background: #f1f2f6;
-      border: 2px solid #ccc;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 13px;
-      user-select: none;
-      transition: all 0.2s;
+      padding: 8px 14px; background: #f1f2f6; border: 2px solid #ccc; border-radius: 20px;
+      cursor: pointer; font-weight: bold; font-size: 13px; user-select: none; transition: all 0.2s;
     }
     .criterion-chip:hover { background: #e4e7eb; }
-    .criterion-chip.selected {
-      background: #0076ff;
-      color: white;
-      border-color: #005bb5;
-    }
+    .criterion-chip.selected { background: #0076ff; color: white; border-color: #005bb5; }
     .priority-slot-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: white;
-      padding: 8px 12px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; background: white;
+      padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;
     }
   </style>
 </head>
@@ -198,7 +192,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     <a href="/wishlist" class="btn-wishlist-nav">Wishlist</a>
   </div>
 
-  <!-- CAROUSEL PROMO -->
+  <!-- Carousel Promo -->
   {databasePromo.length > 0 && (
     <div class="carousel-container">
       <button class="carousel-btn prev-btn" id="prevPromoBtn">&#10094;</button>
@@ -231,6 +225,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     <span id="spkStatusInfo" style="font-size: 14px; color: #2ed573; font-weight: bold;"></span>
   </div>
 
+  <!-- Grid Mobil -->
   <div class="grid" id="carGrid">
     {databaseMobil.map((mobil) => {
       let images = [];
@@ -256,7 +251,6 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
           
           <span class="badge-spk" style="display: none;"></span>
 
-          <!-- SLIDER GAMBAR MOBIL -->
           <div class="card-slider">
             <div class="card-track" data-index="0">
               {images.map(img => (
@@ -289,7 +283,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     })}
   </div>
 
-  <!-- Pop-up Standard Filter -->
+  <!-- Modal Filter -->
   <div id="filterModal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
@@ -350,15 +344,14 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     </div>
   </div>
 
-  <!-- POP-UP MODAL SPK (SISTEM PENDUKUNG KEPUTUSAN) -->
+  <!-- Modal SPK -->
   <div id="spkModal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Fitur Rekomendasi SPK (Rank Sum & MOORA)</h3>
+        <h3>Fitur Rekomendasi</h3>
         <button id="closeSpkModalBtn" class="close-btn">&times;</button>
       </div>
 
-      <!-- 1. FILTER (OPSIONAL) DENGAN DROPDOWN ACCORDION -->
       <div style="margin-bottom: 15px;">
         <button type="button" id="toggleFilterDropdown" class="accordion-header">
           <span>1. Filter (Opsional)</span>
@@ -412,7 +405,6 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
         </div>
       </div>
 
-      <!-- 2. PILIH PRIORITAS -->
       <div class="spk-section-title">2. Pilih Prioritas</div>
       <p style="font-size: 12px; color: #666; margin-top: -5px;">Klik kriteria di bawah untuk memasukkannya ke urutan prioritas sesuai keinginan. Klik ulang untuk menghapus.</p>
 
@@ -446,96 +438,81 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
   </div>
 
   <script>
-    declare global {
-      interface Window {
-        moveCardSlide: (button: HTMLElement, direction: number) => void;
-        removePriority: (key: string) => void;
-      }
-    }
+    // @ts-nocheck
+    import { filterEligibleItems, rankItemsWithMoora } from '../lib/spk.js';
 
-    window.moveCardSlide = function(button: HTMLElement, direction: number) {
+    window.moveCardSlide = function(button, direction) {
       const slider = button.closest('.card-slider');
       if (!slider) return;
-      const track = slider.querySelector('.card-track') as HTMLElement;
+      const track = slider.querySelector('.card-track');
       if (!track) return;
       const slides = track.querySelectorAll('.card-slide');
-      let index = parseInt(track.getAttribute('data-index') || '0');
+      let index = parseInt(track.getAttribute('data-index') || '0', 10);
       
-      index = index + direction;
-      if (index < 0) index = slides.length - 1;
-      if (index >= slides.length) index = 0;
-      
-      track.setAttribute('data-index', index.toString());
+      index = (index + direction + slides.length) % slides.length;
+      track.setAttribute('data-index', String(index));
       track.style.transform = `translateX(-${index * 100}%)`;
     };
 
-    // --- CAROUSEL PROMO ---
-    const track = document.getElementById('carouselTrack') as HTMLElement | null;
+    // Carousel Promo
+    const track = document.getElementById('carouselTrack');
     const slides = document.querySelectorAll('.carousel-slide');
     const dots = document.querySelectorAll('.dot');
     const prevBtn = document.getElementById('prevPromoBtn');
     const nextBtn = document.getElementById('nextPromoBtn');
     let currentIndex = 0;
-    const totalSlides = slides.length;
 
-    function updateCarousel(index: number) {
-      if (!track) return;
-      currentIndex = index;
-      if (currentIndex < 0) currentIndex = totalSlides - 1;
-      if (currentIndex >= totalSlides) currentIndex = 0;
+    function updateCarousel(index) {
+      if (!track || slides.length === 0) return;
+      currentIndex = (index + slides.length) % slides.length;
       track.style.transform = `translateX(-${currentIndex * 100}%)`;
       dots.forEach((dot, i) => dot.classList.toggle('active', i === currentIndex));
     }
 
-    if (nextBtn) nextBtn.addEventListener('click', () => updateCarousel(currentIndex + 1));
-    if (prevBtn) prevBtn.addEventListener('click', () => updateCarousel(currentIndex - 1));
+    nextBtn?.addEventListener('click', () => updateCarousel(currentIndex + 1));
+    prevBtn?.addEventListener('click', () => updateCarousel(currentIndex - 1));
     dots.forEach(dot => {
       dot.addEventListener('click', (e) => {
-        const idx = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0');
+        const idx = parseInt(e.currentTarget.getAttribute('data-index') || '0', 10);
         updateCarousel(idx);
       });
     });
-    if (totalSlides > 1) setInterval(() => updateCarousel(currentIndex + 1), 5000);
+    if (slides.length > 1) setInterval(() => updateCarousel(currentIndex + 1), 5000);
 
-    // --- MODAL CONTROLS ---
-    const filterModal = document.getElementById('filterModal') as HTMLElement | null;
-    const openModalBtn = document.getElementById('openModalBtn') as HTMLButtonElement | null;
-    const closeModalBtn = document.getElementById('closeModalBtn') as HTMLButtonElement | null;
-    
-    const spkModal = document.getElementById('spkModal') as HTMLElement | null;
-    const openSpkModalBtn = document.getElementById('openSpkModalBtn') as HTMLButtonElement | null;
-    const closeSpkModalBtn = document.getElementById('closeSpkModalBtn') as HTMLButtonElement | null;
+    // Kontrol Modal
+    const filterModal = document.getElementById('filterModal');
+    const spkModal = document.getElementById('spkModal');
 
-    if (openModalBtn && filterModal) openModalBtn.addEventListener('click', () => filterModal.style.display = 'flex');
-    if (closeModalBtn && filterModal) closeModalBtn.addEventListener('click', () => filterModal.style.display = 'none');
-    
-    if (openSpkModalBtn && spkModal) openSpkModalBtn.addEventListener('click', () => spkModal.style.display = 'flex');
-    if (closeSpkModalBtn && spkModal) closeSpkModalBtn.addEventListener('click', () => spkModal.style.display = 'none');
+    document.getElementById('openModalBtn')?.addEventListener('click', () => {
+      if (filterModal) filterModal.style.display = 'flex';
+    });
+    document.getElementById('closeModalBtn')?.addEventListener('click', () => {
+      if (filterModal) filterModal.style.display = 'none';
+    });
+    document.getElementById('openSpkModalBtn')?.addEventListener('click', () => {
+      if (spkModal) spkModal.style.display = 'flex';
+    });
+    document.getElementById('closeSpkModalBtn')?.addEventListener('click', () => {
+      if (spkModal) spkModal.style.display = 'none';
+    });
 
     window.addEventListener('click', (e) => {
       if (e.target === filterModal && filterModal) filterModal.style.display = 'none';
       if (e.target === spkModal && spkModal) spkModal.style.display = 'none';
     });
 
-    // --- ACCORDION TOGGLE UNTUK FILTER (OPSIONAL) ---
+    //  Filter
     const toggleFilterDropdown = document.getElementById('toggleFilterDropdown');
     const filterDropdownBody = document.getElementById('filterDropdownBody');
     const accordionArrow = document.getElementById('accordionArrow');
 
-    if (toggleFilterDropdown && filterDropdownBody && accordionArrow) {
-      toggleFilterDropdown.addEventListener('click', () => {
-        filterDropdownBody.classList.toggle('open');
-        if (filterDropdownBody.classList.contains('open')) {
-          accordionArrow.innerHTML = '&#9650;';
-        } else {
-          accordionArrow.innerHTML = '&#9660;';
-        }
-      });
-    }
+    toggleFilterDropdown?.addEventListener('click', () => {
+      const isOpen = filterDropdownBody?.classList.toggle('open');
+      if (accordionArrow) accordionArrow.innerHTML = isOpen ? '&#9650;' : '&#9660;';
+    });
 
-    // --- INTERACTIVE PRIORITY CHIPS LOGIC ---
-    let chosenPriorities: string[] = [];
-    const criterionNames: Record<string, string> = {
+    let chosenPriorities = [];
+    const criterionNames = {
       harga: 'Harga',
       km: 'Jumlah KM',
       tahun: 'Tahun Mobil',
@@ -549,45 +526,29 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
     function updatePriorityUI() {
       chips.forEach(chip => {
         const key = chip.getAttribute('data-key');
-        if (chosenPriorities.includes(key!)) {
-          chip.classList.add('selected');
-        } else {
-          chip.classList.remove('selected');
-        }
+        chip.classList.toggle('selected', Boolean(key && chosenPriorities.includes(key)));
       });
 
-      if (!slotsList) return;
-      slotsList.innerHTML = '';
-      if (chosenPriorities.length === 0) {
-        slotsList.innerHTML = '<span style="color: #888; font-style: italic;">Belum ada kriteria yang dipilih (klik chip di atas).</span>';
-      } else {
-        chosenPriorities.forEach((key, index) => {
-          const div = document.createElement('div');
-          div.className = 'priority-slot-item';
-          div.innerHTML = `<span><strong>#${index + 1}</strong>: ${criterionNames[key]}</span>`;
-          slotsList.appendChild(div);
-        });
-      }
-
-      // Tampilkan pilihan preferensi CC HANYA JIKA 'cc' dipilih dalam prioritas
-      if (ccPreferenceGroup) {
-        if (chosenPriorities.includes('cc')) {
-          ccPreferenceGroup.style.display = 'block';
+      if (slotsList) {
+        if (chosenPriorities.length === 0) {
+          slotsList.innerHTML = '<span style="color: #888; font-style: italic;">Belum ada kriteria yang dipilih (klik chip di atas).</span>';
         } else {
-          ccPreferenceGroup.style.display = 'none';
+          slotsList.innerHTML = chosenPriorities
+            .map((key, idx) => `<div class="priority-slot-item"><span><strong>#${idx + 1}</strong>: ${criterionNames[key]}</span></div>`)
+            .join('');
         }
       }
-    }
 
-    window.removePriority = function(key: string) {
-      chosenPriorities = chosenPriorities.filter(k => k !== key);
-      updatePriorityUI();
-    };
+      if (ccPreferenceGroup) {
+        ccPreferenceGroup.style.display = chosenPriorities.includes('cc') ? 'block' : 'none';
+      }
+    }
 
     chips.forEach(chip => {
       chip.addEventListener('click', () => {
         const key = chip.getAttribute('data-key');
         if (!key) return;
+
         if (chosenPriorities.includes(key)) {
           chosenPriorities = chosenPriorities.filter(k => k !== key);
         } else {
@@ -601,30 +562,28 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
       });
     });
 
-    // --- FILTER STANDARD KATALOG ---
-    const searchInput = document.getElementById('searchName') as HTMLInputElement | null;
-    const sortPrice = document.getElementById('sortPrice') as HTMLSelectElement | null;
-    const minPrice = document.getElementById('minPrice') as HTMLInputElement | null;
-    const maxPrice = document.getElementById('maxPrice') as HTMLInputElement | null;
-    const brandFilter = document.getElementById('brandFilter') as HTMLSelectElement | null;
-    const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement | null;
-    const transmissionFilter = document.getElementById('transmissionFilter') as HTMLSelectElement | null;
-    const taxFilterCheckbox = document.getElementById('taxFilterCheckbox') as HTMLInputElement | null;
-    
-    const carGrid = document.getElementById('carGrid') as HTMLElement | null;
-    const cardsArray = Array.from(document.querySelectorAll('.card')) as HTMLElement[];
+    const searchInput = document.getElementById('searchName');
+    const sortPrice = document.getElementById('sortPrice');
+    const minPrice = document.getElementById('minPrice');
+    const maxPrice = document.getElementById('maxPrice');
+    const brandFilter = document.getElementById('brandFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const transmissionFilter = document.getElementById('transmissionFilter');
+    const taxFilterCheckbox = document.getElementById('taxFilterCheckbox');
+    const carGrid = document.getElementById('carGrid');
+    const cardsArray = Array.from(document.querySelectorAll('.card'));
 
     function applyFilters() {
-      if (!searchInput || !sortPrice || !minPrice || !maxPrice || !brandFilter || !categoryFilter || !transmissionFilter || !carGrid) return;
+      if (!carGrid) return;
 
-      const searchValue = searchInput.value.toLowerCase();
-      const sortValue = sortPrice.value;
-      const minVal = parseFloat(minPrice.value) || 0;
-      const maxVal = parseFloat(maxPrice.value) || Infinity;
-      const brandVal = brandFilter.value;
-      const catVal = categoryFilter.value;
-      const transVal = transmissionFilter.value;
-      const isTaxHidupOnly = taxFilterCheckbox ? taxFilterCheckbox.checked : false;
+      const searchValue = (searchInput?.value || '').toLowerCase();
+      const sortValue = sortPrice?.value || 'default';
+      const minVal = parseFloat(minPrice?.value || '') || 0;
+      const maxVal = parseFloat(maxPrice?.value || '') || Infinity;
+      const brandVal = brandFilter?.value || 'all';
+      const catVal = categoryFilter?.value || 'all';
+      const transVal = transmissionFilter?.value || 'all';
+      const isTaxHidupOnly = Boolean(taxFilterCheckbox?.checked);
 
       cardsArray.forEach(card => {
         const nama = card.getAttribute('data-nama') || '';
@@ -634,18 +593,16 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
         const trans = card.getAttribute('data-transmisi') || '';
         const tax = card.getAttribute('data-pajak') || '';
 
-        const matchSearch = nama.includes(searchValue);
-        const matchPrice = harga >= minVal && harga <= maxVal;
-        const matchBrand = brandVal === 'all' || brand === brandVal;
-        const matchCat = catVal === 'all' || cat === catVal;
-        const matchTrans = transVal === 'all' || trans === transVal;
-        const matchTax = !isTaxHidupOnly || tax.toLowerCase().includes('hidup');
+        const match =
+          nama.includes(searchValue) &&
+          harga >= minVal &&
+          harga <= maxVal &&
+          (brandVal === 'all' || brand === brandVal) &&
+          (catVal === 'all' || cat === catVal) &&
+          (transVal === 'all' || trans === transVal) &&
+          (!isTaxHidupOnly || tax.toLowerCase().includes('hidup'));
 
-        if (matchSearch && matchPrice && matchBrand && matchCat && matchTrans && matchTax) {
-          card.style.display = 'flex'; 
-        } else {
-          card.style.display = 'none';
-        }
+        card.style.display = match ? 'flex' : 'none';
       });
 
       if (sortValue !== 'default') {
@@ -660,161 +617,84 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
       cardsArray.forEach(card => carGrid.appendChild(card));
     }
 
-    const applyBtn = document.getElementById('applyBtn') as HTMLButtonElement | null;
-    const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
-    if (applyBtn) applyBtn.addEventListener('click', () => { applyFilters(); if (filterModal) filterModal.style.display = 'none'; });
-    if (searchInput) searchInput.addEventListener('input', applyFilters);
-    if (resetBtn) resetBtn.addEventListener('click', () => {
+    document.getElementById('applyBtn')?.addEventListener('click', () => {
+      applyFilters();
       if (filterModal) filterModal.style.display = 'none';
-      location.reload();
+    });
+    searchInput?.addEventListener('input', applyFilters);
+    document.getElementById('resetBtn')?.addEventListener('click', () => location.reload());
+
+    // Proses SPK
+    const spkStatusInfo = document.getElementById('spkStatusInfo');
+
+    document.getElementById('runSpkBtn')?.addEventListener('click', () => {
+      if (chosenPriorities.length === 0) {
+        alert('Harap pilih minimal 1 kriteria prioritas untuk SPK.');
+        return;
+      }
+
+      const filters = {
+        minPrice: parseFloat(document.getElementById('spkMinPrice')?.value || '') || 0,
+        maxPrice: parseFloat(document.getElementById('spkMaxPrice')?.value || '') || Infinity,
+        minKm: parseFloat(document.getElementById('spkMinKm')?.value || '') || 0,
+        maxKm: parseFloat(document.getElementById('spkMaxKm')?.value || '') || Infinity,
+        brand: document.getElementById('spkBrandFilter')?.value || 'all',
+        category: document.getElementById('spkCategoryFilter')?.value || 'all',
+        transmission: document.getElementById('spkTransmissionFilter')?.value || 'all',
+        isTaxHidup: Boolean(document.getElementById('spkTaxCheckbox')?.checked),
+      };
+
+      const ccPreference = document.querySelector('input[name="ccPreference"]:checked')?.value || 'besar';
+
+      const cardRecords = cardsArray.map(card => ({
+        card,
+        harga: parseFloat(card.getAttribute('data-harga') || '0'),
+        km: parseFloat(card.getAttribute('data-km') || '0'),
+        tahun: parseFloat(card.getAttribute('data-tahun') || '0'),
+        cc: parseFloat(card.getAttribute('data-cc') || '0'),
+        brand: card.getAttribute('data-brand') || '',
+        kategori: card.getAttribute('data-kategori') || '',
+        transmisi: card.getAttribute('data-transmisi') || '',
+        pajak: card.getAttribute('data-pajak') || '',
+      }));
+
+      const eligible = filterEligibleItems(cardRecords, filters);
+      if (eligible.length === 0) {
+        alert('Tidak ada mobil yang memenuhi kriteria filter opsional SPK.');
+        return;
+      }
+
+      const ranked = rankItemsWithMoora(eligible, chosenPriorities, ccPreference);
+
+      cardsArray.forEach(card => {
+        card.style.display = 'none';
+        const badge = card.querySelector('.badge-spk');
+        if (badge) badge.style.display = 'none';
+      });
+
+      if (carGrid) {
+        carGrid.innerHTML = '';
+        ranked.forEach((entry, index) => {
+          const { card } = entry.item;
+          card.style.display = 'flex';
+
+          const badge = card.querySelector('.badge-spk');
+          if (badge) {
+            badge.style.display = 'inline-block';
+            badge.innerText = `#${index + 1} SPK (Skor: ${entry.yi.toFixed(4)})`;
+          }
+
+          carGrid.appendChild(card);
+        });
+      }
+
+      if (spkStatusInfo) {
+        spkStatusInfo.innerText = `Menampilkan ${ranked.length} Rekomendasi SPK Terbaik`;
+      }
+      if (spkModal) spkModal.style.display = 'none';
     });
 
-    // --- ALGORITMA SPK (RANK SUM & MOORA) FLEKSIBEL ---
-    const runSpkBtn = document.getElementById('runSpkBtn') as HTMLButtonElement | null;
-    const resetSpkBtn = document.getElementById('resetSpkBtn') as HTMLButtonElement | null;
-    const spkStatusInfo = document.getElementById('spkStatusInfo') as HTMLElement | null;
-
-    if (runSpkBtn) {
-      runSpkBtn.addEventListener('click', () => {
-        if (chosenPriorities.length === 0) {
-          alert('Harap pilih minimal 1 kriteria prioritas untuk SPK.');
-          return;
-        }
-
-        const spkMinPriceEl = document.getElementById('spkMinPrice') as HTMLInputElement | null;
-        const spkMaxPriceEl = document.getElementById('spkMaxPrice') as HTMLInputElement | null;
-        const spkMinKmEl = document.getElementById('spkMinKm') as HTMLInputElement | null;
-        const spkMaxKmEl = document.getElementById('spkMaxKm') as HTMLInputElement | null;
-        const spkBrandFilterEl = document.getElementById('spkBrandFilter') as HTMLSelectElement | null;
-        const spkCategoryFilterEl = document.getElementById('spkCategoryFilter') as HTMLSelectElement | null;
-        const spkTransmissionFilterEl = document.getElementById('spkTransmissionFilter') as HTMLSelectElement | null;
-        const spkTaxCheckboxEl = document.getElementById('spkTaxCheckbox') as HTMLInputElement | null;
-        const ccPrefEl = document.querySelector('input[name="ccPreference"]:checked') as HTMLInputElement | null;
-
-        const minPrice = spkMinPriceEl ? parseFloat(spkMinPriceEl.value) || 0 : 0;
-        const maxPrice = spkMaxPriceEl ? parseFloat(spkMaxPriceEl.value) || Infinity : Infinity;
-        const minKm = spkMinKmEl ? parseFloat(spkMinKmEl.value) || 0 : 0;
-        const maxKm = spkMaxKmEl ? parseFloat(spkMaxKmEl.value) || Infinity : Infinity;
-        const brand = spkBrandFilterEl ? spkBrandFilterEl.value : 'all';
-        const cat = spkCategoryFilterEl ? spkCategoryFilterEl.value : 'all';
-        const trans = spkTransmissionFilterEl ? spkTransmissionFilterEl.value : 'all';
-        const isTaxHidup = spkTaxCheckboxEl ? spkTaxCheckboxEl.checked : false;
-        const ccPreference = ccPrefEl ? ccPrefEl.value : 'besar';
-
-        const eligibleCards = cardsArray.filter(card => {
-          const cHarga = parseFloat(card.getAttribute('data-harga') || '0');
-          const cKm = parseFloat(card.getAttribute('data-km') || '0');
-          const cBrand = card.getAttribute('data-brand') || '';
-          const cCat = card.getAttribute('data-kategori') || '';
-          const cTrans = card.getAttribute('data-transmisi') || '';
-          const cTax = card.getAttribute('data-pajak') || '';
-
-          const matchPrice = cHarga >= minPrice && cHarga <= maxPrice;
-          const matchKm = cKm >= minKm && cKm <= maxKm;
-          const matchBrand = brand === 'all' || cBrand === brand;
-          const matchCat = cat === 'all' || cCat === cat;
-          const matchTrans = trans === 'all' || cTrans === trans;
-          const matchTax = !isTaxHidup || cTax.toLowerCase().includes('hidup');
-
-          return matchPrice && matchKm && matchBrand && matchCat && matchTrans && matchTax;
-        });
-
-        if (eligibleCards.length === 0) {
-          alert('Tidak ada mobil yang memenuhi kriteria filter opsional SPK.');
-          return;
-        }
-
-        // Pembobotan Rank Sum DINAMIS berdasarkan jumlah kriteria yang dipilih user (N = chosenPriorities.length)
-        const N = chosenPriorities.length;
-        const sumRank = (N * (N + 1)) / 2;
-        
-        const weights: Record<string, number> = {};
-        chosenPriorities.forEach((kriteria, idx) => {
-          const rank = idx + 1;
-          weights[kriteria] = (N - rank + 1) / sumRank;
-        });
-        ['harga', 'km', 'tahun', 'cc'].forEach(k => {
-          if (!(k in weights)) weights[k] = 0;
-        });
-
-        let sumSqHarga = 0, sumSqKm = 0, sumSqTahun = 0, sumSqCc = 0;
-        eligibleCards.forEach(card => {
-          sumSqHarga += Math.pow(parseFloat(card.getAttribute('data-harga') || '0'), 2);
-          sumSqKm += Math.pow(parseFloat(card.getAttribute('data-km') || '0'), 2);
-          sumSqTahun += Math.pow(parseFloat(card.getAttribute('data-tahun') || '0'), 2);
-          sumSqCc += Math.pow(parseFloat(card.getAttribute('data-cc') || '0'), 2);
-        });
-
-        const denomHarga = Math.sqrt(sumSqHarga) || 1;
-        const denomKm = Math.sqrt(sumSqKm) || 1;
-        const denomTahun = Math.sqrt(sumSqTahun) || 1;
-        const denomCc = Math.sqrt(sumSqCc) || 1;
-
-        const scoredCards = eligibleCards.map(card => {
-          const valHarga = parseFloat(card.getAttribute('data-harga') || '0');
-          const valKm = parseFloat(card.getAttribute('data-km') || '0');
-          const valTahun = parseFloat(card.getAttribute('data-tahun') || '0');
-          const valCc = parseFloat(card.getAttribute('data-cc') || '0');
-
-          const rHarga = valHarga / denomHarga;
-          const rKm = valKm / denomKm;
-          const rTahun = valTahun / denomTahun;
-          const rCc = valCc / denomCc;
-
-          const wHarga = rHarga * (weights['harga'] || 0);
-          const wKm = rKm * (weights['km'] || 0);
-          const wTahun = rTahun * (weights['tahun'] || 0);
-          const wCc = rCc * (weights['cc'] || 0);
-
-          let benefitSum = 0;
-          let costSum = 0;
-
-          if (chosenPriorities.includes('tahun')) benefitSum += wTahun;
-          if (chosenPriorities.includes('cc')) {
-            if (ccPreference === 'besar') {
-              benefitSum += wCc;
-            } else {
-              costSum += wCc;
-            }
-          }
-          if (chosenPriorities.includes('harga')) costSum += wHarga;
-          if (chosenPriorities.includes('km')) costSum += wKm;
-
-          const yi = benefitSum - costSum;
-
-          return { card, yi };
-        });
-
-        scoredCards.sort((a, b) => b.yi - a.yi);
-
-        cardsArray.forEach(card => card.style.display = 'none');
-        if (carGrid) {
-          carGrid.innerHTML = '';
-          scoredCards.forEach((item, index) => {
-            const card = item.card;
-            card.style.display = 'flex';
-            
-            const badge = card.querySelector('.badge-spk') as HTMLElement | null;
-            if (badge) {
-              badge.style.display = 'inline-block';
-              badge.innerText = `#${index + 1} SPK (Skor: ${item.yi.toFixed(4)})`;
-            }
-            
-            carGrid.appendChild(card);
-          });
-        }
-
-        if (spkStatusInfo) spkStatusInfo.innerText = `Menampilkan ${scoredCards.length} Rekomendasi SPK Terbaik`;
-        if (spkModal) spkModal.style.display = 'none';
-      });
-    }
-
-    if (resetSpkBtn) {
-      resetSpkBtn.addEventListener('click', () => {
-        if (spkModal) spkModal.style.display = 'none';
-        location.reload();
-      });
-    }
+    document.getElementById('resetSpkBtn')?.addEventListener('click', () => location.reload());
   </script>
 
 </body>

@@ -2,12 +2,25 @@
 // @ts-nocheck
 export const prerender = false;
 import { pool } from '../../../lib/db.js';
+import { catatLog } from '../../../lib/auditLog.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const sessionId = Astro.cookies.get('admin_session')?.value;
 if (!sessionId) return Astro.redirect('/admin/login');
 
+const [sessionRows] = await pool.query(`
+  SELECT s.*, a.admin_id, a.username FROM Session s 
+  JOIN Admin a ON s.admin_id = a.admin_id 
+  WHERE s.session_id = ? AND s.expiration_time > NOW()
+`, [sessionId]);
+
+if (sessionRows.length === 0) {
+  Astro.cookies.delete('admin_session', { path: '/' });
+  return Astro.redirect('/admin/login');
+}
+
+const currentAdmin = sessionRows[0];
 const { id } = Astro.params;
 
 let errorMessage = '';
@@ -16,10 +29,136 @@ const [rows] = await pool.query('SELECT * FROM Mobil WHERE id_mobil = ?', [id]);
 if (rows.length === 0) return Astro.redirect('/admin/mobil');
 const mobil = rows[0];
 
+function removeLocalFiles(imageField) {
+  const uploadRoot = path.resolve('./public');
+  let list = [];
+  try {
+    list = JSON.parse(imageField || '[]');
+  } catch {
+    list = imageField ? [imageField] : [];
+  }
+
+  for (const relPath of list) {
+    if (typeof relPath === 'string' && relPath.startsWith('/uploads/')) {
+      const fullPath = path.join(uploadRoot, relPath);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+  }
+}
+
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
-    
+    const action = formData.get('action')?.toString();
+
+    if (action === 'delete_permanent') {
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        await conn.query('DELETE FROM Mobil WHERE id_mobil = ?', [id]);
+
+        await catatLog({
+          conn,
+          admin_id: currentAdmin.admin_id,
+          username: currentAdmin.username,
+          aksi: 'DELETE_MOBIL_PERMANENT',
+          entitas: 'Mobil',
+          target_id: id,
+          ringkasan: `Hapus permanen (salah input) mobil #${id}: ${mobil.brand_mobil} ${mobil.model_mobil}`,
+          data_sebelum: mobil,
+          ip_address: Astro.clientAddress
+        });
+
+        await conn.commit();
+      } catch (txErr) {
+        await conn.rollback();
+        throw txErr;
+      } finally {
+        conn.release();
+      }
+
+      removeLocalFiles(mobil.gambar_mobil);
+      return Astro.redirect('/admin/mobil?status=deleted');
+    }
+
+    if (action === 'delete_sold') {
+      const buktiFile = formData.get('bukti_penjualan');
+      if (!buktiFile || typeof buktiFile !== 'object' || buktiFile.size === 0) {
+        throw new Error('Bukti penjualan berupa file gambar wajib diunggah untuk mobil terjual.');
+      }
+
+      if (buktiFile.type && !buktiFile.type.startsWith('image/')) {
+        throw new Error('File bukti penjualan harus berupa gambar (JPG, PNG, WEBP, dll).');
+      }
+
+      const uploadDir = path.resolve('./public/uploads/bukti');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const safeName = buktiFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      const fileName = `bukti-${Date.now()}-${safeName}`;
+      const buffer = Buffer.from(await buktiFile.arrayBuffer());
+      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      const buktiUrl = `/uploads/bukti/${fileName}`;
+
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        await conn.query(`
+          INSERT INTO Mobil_Terjual (
+            id_mobil, brand_mobil, model_mobil, harga, kategori_mobil, transmisi,
+            warna_mobil, status_pajak, jumlah_km, tahun_mobil, kapasitas_mesin,
+            deskripsi_mobil, gambar_mobil, bukti_penjualan
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          mobil.id_mobil,
+          mobil.brand_mobil,
+          mobil.model_mobil,
+          mobil.harga || 0,
+          mobil.kategori_mobil,
+          mobil.transmisi,
+          mobil.warna_mobil,
+          mobil.status_pajak,
+          mobil.jumlah_km || 0,
+          mobil.tahun_mobil || null,
+          mobil.kapasitas_mesin || 0,
+          mobil.deskripsi_mobil,
+          mobil.gambar_mobil,
+          buktiUrl
+        ]);
+
+        await conn.query('DELETE FROM Mobil WHERE id_mobil = ?', [id]);
+
+        await catatLog({
+          conn,
+          admin_id: currentAdmin.admin_id,
+          username: currentAdmin.username,
+          aksi: 'MARK_MOBIL_SOLD',
+          entitas: 'Mobil',
+          target_id: id,
+          ringkasan: `Menandai terjual & mengarsipkan mobil #${id}: ${mobil.brand_mobil} ${mobil.model_mobil}`,
+          data_sebelum: mobil,
+          data_sesudah: { status: 'Terjual', bukti_penjualan: buktiUrl },
+          ip_address: Astro.clientAddress
+        });
+
+        await conn.commit();
+      } catch (txErr) {
+        await conn.rollback();
+        throw txErr;
+      } finally {
+        conn.release();
+      }
+
+      return Astro.redirect('/admin/mobil/arsip?status=sold');
+    }
+
+    // Default: Update info mobil
     let brand_mobil = formData.get('brand_mobil')?.toString().trim();
     const brand_lainnya = formData.get('brand_lainnya')?.toString().trim();
     if (brand_mobil === 'Lainnya' && brand_lainnya) {
@@ -28,12 +167,13 @@ if (Astro.request.method === 'POST') {
 
     const model_mobil = formData.get('model_mobil')?.toString().trim();
     const harga = Number(formData.get('harga')) || 0;
-    
+
     const rawKm = formData.get('jumlah_km')?.toString().replace(/\./g, '') || '0';
     const jumlah_km = Number(rawKm) || 0;
 
     const tahun_mobil = Number(formData.get('tahun_mobil')) || new Date().getFullYear();
     const kapasitas_mesin = Number(formData.get('kapasitas_mesin')) || 0;
+    const digit_tampil = Number(formData.get('digit_tampil')) || 3;
 
     const kategori_mobil = formData.get('kategori_mobil')?.toString().trim();
     const transmisi = formData.get('transmisi')?.toString().trim();
@@ -41,12 +181,12 @@ if (Astro.request.method === 'POST') {
     const status_pajak = formData.get('status_pajak')?.toString().trim();
     const deskripsi_mobil = formData.get('deskripsi_mobil')?.toString().trim();
 
-    if (isNaN(harga) || isNaN(jumlah_km) || isNaN(tahun_mobil) || isNaN(kapasitas_mesin)) {
-      throw new Error("Harga, Jumlah KM, Tahun, dan Kapasitas Mesin harus berupa angka yang valid.");
+    if (isNaN(harga) || isNaN(jumlah_km) || isNaN(tahun_mobil) || isNaN(kapasitas_mesin) || isNaN(digit_tampil)) {
+      throw new Error("Harga, Jumlah KM, Tahun, Kapasitas Mesin, dan Digit Depan Harga harus berupa angka yang valid.");
     }
 
     const imageFiles = formData.getAll('gambar_mobil');
-    let gambar_mobil_json = mobil.gambar_mobil; 
+    let gambar_mobil_json = mobil.gambar_mobil;
 
     const validFiles = imageFiles.filter(f => f && typeof f === 'object' && f.size > 0);
     if (validFiles.length > 0) {
@@ -64,16 +204,56 @@ if (Astro.request.method === 'POST') {
       gambar_mobil_json = JSON.stringify(savedFileNames);
     }
 
-    await pool.query(`
-      UPDATE Mobil 
-      SET brand_mobil=?, model_mobil=?, harga=?, kategori_mobil=?, transmisi=?, warna_mobil=?, status_pajak=?, jumlah_km=?, tahun_mobil=?, kapasitas_mesin=?, deskripsi_mobil=?, gambar_mobil=?
-      WHERE id_mobil=?
-    `, [brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, tahun_mobil, kapasitas_mesin, deskripsi_mobil, gambar_mobil_json, id]);
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(`
+        UPDATE Mobil 
+        SET brand_mobil=?, model_mobil=?, harga=?, kategori_mobil=?, transmisi=?, warna_mobil=?, status_pajak=?, jumlah_km=?, tahun_mobil=?, kapasitas_mesin=?, digit_tampil=?, deskripsi_mobil=?, gambar_mobil=?
+        WHERE id_mobil=?
+      `, [brand_mobil, model_mobil, harga, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, tahun_mobil, kapasitas_mesin, digit_tampil, deskripsi_mobil, gambar_mobil_json, id]);
+
+      await catatLog({
+        conn,
+        admin_id: currentAdmin.admin_id,
+        username: currentAdmin.username,
+        aksi: 'UPDATE_MOBIL',
+        entitas: 'Mobil',
+        target_id: id,
+        ringkasan: `Memperbarui data mobil #${id}: ${brand_mobil} ${model_mobil}`,
+        data_sebelum: mobil,
+        data_sesudah: {
+          id_mobil: Number(id),
+          brand_mobil,
+          model_mobil,
+          harga,
+          kategori_mobil,
+          transmisi,
+          warna_mobil,
+          status_pajak,
+          jumlah_km,
+          tahun_mobil,
+          kapasitas_mesin,
+          digit_tampil,
+          deskripsi_mobil,
+          gambar_mobil: gambar_mobil_json
+        },
+        ip_address: Astro.clientAddress
+      });
+
+      await conn.commit();
+    } catch (txErr) {
+      await conn.rollback();
+      throw txErr;
+    } finally {
+      conn.release();
+    }
 
     return Astro.redirect('/admin/mobil');
   } catch (err) {
-    console.error('DETAIL ERROR UPDATE MOBIL:', err);
-    errorMessage = `Gagal memperbarui data: ${err.message || 'Terjadi kesalahan pada database.'}`;
+    console.error('DETAIL ERROR UPDATE/DELETE MOBIL:', err);
+    errorMessage = `Gagal memproses data: ${err.message || 'Terjadi kesalahan pada database.'}`;
   }
 }
 
@@ -99,7 +279,7 @@ try {
     .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
     .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
     .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
-    
+
     .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
     .form-card { background: white; padding: 30px; border-radius: 8px; border: 1px solid #ddd; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .form-group { margin-bottom: 15px; }
@@ -111,6 +291,36 @@ try {
     .preview-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     .preview-container img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
     .hidden { display: none; }
+
+    /* Danger / Delete Zone */
+    .danger-zone { margin-top: 28px; padding-top: 22px; border-top: 1px solid #e5e7eb; }
+    .danger-zone h3 { margin: 0 0 6px 0; font-size: 16px; color: #991b1b; }
+    .danger-zone p { margin: 0 0 14px 0; font-size: 13px; color: #6b7280; }
+    .btn-delete-open { background: #dc2626; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-delete-open:hover { background: #b91c1c; }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+    .modal-backdrop.show { display: flex; }
+    .modal-box { background: white; width: 100%; max-width: 480px; border-radius: 10px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .modal-header h3 { margin: 0; font-size: 18px; color: #222; }
+    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #666; }
+
+    .option-group { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+    .option-card { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
+    .option-card input { margin-top: 3px; }
+    .option-title { font-weight: bold; font-size: 14px; color: #111827; display: block; }
+    .option-desc { font-size: 12px; color: #6b7280; }
+
+    .sold-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+    .sold-box.show { display: block; }
+    .sold-box label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #1e293b; }
+
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .btn-cancel { background: #e5e7eb; color: #374151; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-confirm-perm { background: #dc2626; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-confirm-sold { background: #0f766e; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -119,7 +329,9 @@ try {
     <h2>Admin Panel</h2>
     <a href="/admin/dashboard">Dashboard</a>
     <a href="/admin/mobil" class="active">Kelola Mobil</a>
+    <a href="/admin/mobil/arsip">Arsip Terjual</a>
     <a href="/admin/promo">Kelola Promo</a>
+    <a href="/admin/log">Audit Log</a>
     <a href="/admin/logout" class="logout">Logout</a>
   </div>
 
@@ -128,6 +340,8 @@ try {
     <div class="form-card">
       {errorMessage && <div class="error">{errorMessage}</div>}
       <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="update" />
+
         <div class="form-group">
           <label>ID Mobil</label>
           <input type="text" class="form-control" value={mobil.id_mobil} disabled />
@@ -170,6 +384,11 @@ try {
         <div class="form-group">
           <label>Kapasitas Mesin / CC (Integer)</label>
           <input type="number" name="kapasitas_mesin" class="form-control" value={mobil.kapasitas_mesin || 1500} min="500" max="10000" step="1" required />
+        </div>
+
+        <div class="form-group">
+          <label>Digit Depan Harga yang Ditampilkan</label>
+          <input type="number" name="digit_tampil" class="form-control" value={mobil.digit_tampil ?? 3} min="1" max="15" required />
         </div>
 
         <div class="form-group">
@@ -227,15 +446,68 @@ try {
 
         <button type="submit" class="btn-submit">Perbarui Informasi Mobil</button>
       </form>
+
+      <div class="danger-zone">
+        <h3>Hapus / Arsipkan Mobil</h3>
+        <p>Pilih apakah mobil dihapus karena salah input (permanen) atau sudah terjual (masuk arsip dengan bukti gambar).</p>
+        <button type="button" class="btn-delete-open" onclick="openDeleteModal()">Hapus / Tandai Terjual</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pilihan Delete -->
+  <div id="deleteModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Hapus Data Mobil</h3>
+        <button type="button" class="modal-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <p style="margin: 0; font-size: 14px; color: #4b5563;">
+        Pilih alasan penghapusan untuk <strong>{mobil.brand_mobil} {mobil.model_mobil}</strong>:
+      </p>
+
+      <form method="POST" enctype="multipart/form-data" id="deleteForm">
+        <input type="hidden" name="action" id="deleteActionInput" value="delete_permanent" />
+
+        <div class="option-group">
+          <label class="option-card">
+            <input type="radio" name="delete_mode" value="permanent" checked onchange="toggleDeleteMode()" />
+            <span>
+              <span class="option-title">Salah Input / Hapus Permanen</span>
+              <span class="option-desc">Menghapus data secara permanen dari sistem (tidak masuk ke arsip terjual).</span>
+            </span>
+          </label>
+
+          <label class="option-card">
+            <input type="radio" name="delete_mode" value="sold" onchange="toggleDeleteMode()" />
+            <span>
+              <span class="option-title">Mobil Terjual (Pindahkan ke Arsip)</span>
+              <span class="option-desc">Memindahkan data ke halaman arsip terjual dan wajib menyertakan bukti gambar.</span>
+            </span>
+          </label>
+        </div>
+
+        <div id="soldProofBox" class="sold-box">
+          <label for="buktiInput">Bukti Penjualan (File Gambar Wajib)</label>
+          <input type="file" id="buktiInput" name="bukti_penjualan" class="form-control" accept="image/*" />
+          <small style="color:#64748b; display:block; margin-top:6px;">Contoh: foto kwitansi, nota serah terima, atau bukti transfer.</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Batal</button>
+          <button type="submit" id="confirmBtn" class="btn-confirm-perm">Hapus Permanen</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <script>
-    const brandSelect = document.getElementById('brandSelect') as HTMLSelectElement;
-    const brandLainnyaGroup = document.getElementById('brandLainnyaGroup') as HTMLElement;
-    const brandLainnyaInput = document.getElementById('brandLainnyaInput') as HTMLInputElement;
+    const brandSelect = document.getElementById('brandSelect') as HTMLSelectElement | null;
+    const brandLainnyaGroup = document.getElementById('brandLainnyaGroup') as HTMLElement | null;
+    const brandLainnyaInput = document.getElementById('brandLainnyaInput') as HTMLInputElement | null;
 
     function toggleBrandLainnya() {
+      if (!brandSelect || !brandLainnyaGroup || !brandLainnyaInput) return;
       if (brandSelect.value === 'Lainnya') {
         brandLainnyaGroup.classList.remove('hidden');
         brandLainnyaInput.required = true;
@@ -246,7 +518,87 @@ try {
     }
 
     toggleBrandLainnya();
-    brandSelect.addEventListener('change', toggleBrandLainnya);
+    if (brandSelect) {
+      brandSelect.addEventListener('change', toggleBrandLainnya);
+    }
+
+    const modal = document.getElementById('deleteModal') as HTMLElement | null;
+    const soldProofBox = document.getElementById('soldProofBox') as HTMLElement | null;
+    const buktiInput = document.getElementById('buktiInput') as HTMLInputElement | null;
+    const confirmBtn = document.getElementById('confirmBtn') as HTMLButtonElement | null;
+    const deleteForm = document.getElementById('deleteForm') as HTMLFormElement | null;
+    const deleteActionInput = document.getElementById('deleteActionInput') as HTMLInputElement | null;
+
+    function openDeleteModal() {
+      if (!modal || !deleteForm || !buktiInput) return;
+      const permRadio = deleteForm.querySelector('input[value="permanent"]') as HTMLInputElement | null;
+      if (permRadio) permRadio.checked = true;
+      buktiInput.value = '';
+      toggleDeleteMode();
+      modal.classList.add('show');
+    }
+
+    function closeDeleteModal() {
+      if (!modal) return;
+      modal.classList.remove('show');
+    }
+
+    function toggleDeleteMode() {
+      if (!deleteForm || !soldProofBox || !buktiInput || !confirmBtn || !deleteActionInput) return;
+      const selectedRadio = deleteForm.querySelector('input[name="delete_mode"]:checked') as HTMLInputElement | null;
+      const selected = selectedRadio ? selectedRadio.value : 'permanent';
+
+      if (selected === 'sold') {
+        deleteActionInput.value = 'delete_sold';
+        soldProofBox.classList.add('show');
+        buktiInput.required = true;
+        confirmBtn.textContent = 'Simpan ke Arsip Terjual';
+        confirmBtn.className = 'btn-confirm-sold';
+      } else {
+        deleteActionInput.value = 'delete_permanent';
+        soldProofBox.classList.remove('show');
+        buktiInput.required = false;
+        confirmBtn.textContent = 'Hapus Permanen';
+        confirmBtn.className = 'btn-confirm-perm';
+      }
+    }
+
+    if (deleteForm) {
+      deleteForm.addEventListener('submit', (e) => {
+        const selectedRadio = deleteForm.querySelector('input[name="delete_mode"]:checked') as HTMLInputElement | null;
+        const selected = selectedRadio ? selectedRadio.value : 'permanent';
+
+        if (selected === 'sold') {
+          if (!buktiInput || !buktiInput.files || buktiInput.files.length === 0) {
+            e.preventDefault();
+            alert('Silakan pilih file gambar bukti penjualan terlebih dahulu.');
+            return;
+          }
+          if (!confirm('Tandai mobil ini sebagai TERJUAL dan pindahkan ke halaman arsip?')) {
+            e.preventDefault();
+          }
+        } else {
+          if (!confirm('Yakin ingin menghapus data ini secara permanen karena salah input?')) {
+            e.preventDefault();
+          }
+        }
+      });
+    }
+
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeDeleteModal();
+      });
+    }
+
+    (window as unknown as {
+      openDeleteModal: () => void;
+      closeDeleteModal: () => void;
+      toggleDeleteMode: () => void;
+    }).openDeleteModal = openDeleteModal;
+
+    (window as unknown as { closeDeleteModal: () => void }).closeDeleteModal = closeDeleteModal;
+    (window as unknown as { toggleDeleteMode: () => void }).toggleDeleteMode = toggleDeleteMode;
   </script>
 </body>
 </html>

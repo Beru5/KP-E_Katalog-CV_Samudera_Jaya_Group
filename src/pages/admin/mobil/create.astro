@@ -2,12 +2,25 @@
 // @ts-nocheck
 export const prerender = false;
 import { pool } from '../../../lib/db.js';
+import { catatLog } from '../../../lib/auditLog.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const sessionId = Astro.cookies.get('admin_session')?.value;
 if (!sessionId) return Astro.redirect('/admin/login');
 
+const [sessionRows] = await pool.query(`
+  SELECT s.*, a.admin_id, a.username FROM Session s 
+  JOIN Admin a ON s.admin_id = a.admin_id 
+  WHERE s.session_id = ? AND s.expiration_time > NOW()
+`, [sessionId]);
+
+if (sessionRows.length === 0) {
+  Astro.cookies.delete('admin_session', { path: '/' });
+  return Astro.redirect('/admin/login');
+}
+
+const currentAdmin = sessionRows[0];
 let errorMessage = '';
 
 if (Astro.request.method === 'POST') {
@@ -77,10 +90,49 @@ if (Astro.request.method === 'POST') {
 
     const gambar_mobil_json = JSON.stringify(savedFileNames);
 
-    await pool.query(`
-      INSERT INTO Mobil (id_mobil, brand_mobil, model_mobil, harga, tahun_mobil, kapasitas_mesin, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil, digit_tampil)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id_mobil, brand_mobil, model_mobil, harga, tahun_mobil, kapasitas_mesin, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil_json, digit_tampil]);
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(`
+        INSERT INTO Mobil (id_mobil, brand_mobil, model_mobil, harga, tahun_mobil, kapasitas_mesin, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil, digit_tampil)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [id_mobil, brand_mobil, model_mobil, harga, tahun_mobil, kapasitas_mesin, kategori_mobil, transmisi, warna_mobil, status_pajak, jumlah_km, deskripsi_mobil, gambar_mobil_json, digit_tampil]);
+
+      await catatLog({
+        conn,
+        admin_id: currentAdmin.admin_id,
+        username: currentAdmin.username,
+        aksi: 'CREATE_MOBIL',
+        entitas: 'Mobil',
+        target_id: id_mobil,
+        ringkasan: `Menambahkan mobil baru #${id_mobil}: ${brand_mobil} ${model_mobil} (Rp ${harga.toLocaleString('id-ID')})`,
+        data_sesudah: {
+          id_mobil,
+          brand_mobil,
+          model_mobil,
+          harga,
+          tahun_mobil,
+          kapasitas_mesin,
+          digit_tampil,
+          kategori_mobil,
+          transmisi,
+          warna_mobil,
+          status_pajak,
+          jumlah_km,
+          deskripsi_mobil,
+          gambar_mobil: savedFileNames
+        },
+        ip_address: Astro.clientAddress
+      });
+
+      await conn.commit();
+    } catch (txErr) {
+      await conn.rollback();
+      throw txErr;
+    } finally {
+      conn.release();
+    }
 
     return Astro.redirect('/admin/mobil');
   } catch (err) {
@@ -119,7 +171,9 @@ if (Astro.request.method === 'POST') {
     <h2>Admin Panel</h2>
     <a href="/admin/dashboard">Dashboard</a>
     <a href="/admin/mobil" class="active">Kelola Mobil</a>
+    <a href="/admin/mobil/arsip">Arsip Terjual</a>
     <a href="/admin/promo">Kelola Promo</a>
+    <a href="/admin/log">Audit Log</a>
     <a href="/admin/logout" class="logout">Logout</a>
   </div>
 

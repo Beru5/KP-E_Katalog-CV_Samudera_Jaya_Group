@@ -1,0 +1,23 @@
+---
+// @ts-nocheck
+export const prerender = false;
+
+import { pool } from '../../lib/db.js';
+
+const sessionId = Astro.cookies.get('admin_session')?.value;
+
+if (sessionId) {
+  try {
+    await pool.query(
+      'DELETE FROM Session WHERE session_id = ? OR expiration_time <= NOW()',
+      [sessionId]
+    );
+  } catch (err) {
+    console.error('ERROR LOGOUT SESSION:', err);
+  }
+}
+
+Astro.cookies.delete('admin_session', { path: '/' });
+
+return Astro.redirect('/admin/login');
+---

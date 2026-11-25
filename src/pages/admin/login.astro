@@ -31,6 +31,9 @@ if (Astro.request.method === 'POST') {
       const sessionId = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+      // Hapus semua session yang sudah expired sebelum membuat session baru
+      await pool.query('DELETE FROM Session WHERE expiration_time <= NOW()');
+
       await pool.query('INSERT INTO Session (session_id, admin_id, expiration_time) VALUES (?, ?, ?)', [
         sessionId,
         admin.admin_id,
@@ -40,7 +43,7 @@ if (Astro.request.method === 'POST') {
       Astro.cookies.set('admin_session', sessionId, {
         path: '/',
         httpOnly: true,
-        secure: true,
+        secure: Astro.url.protocol === 'https:',
         sameSite: 'strict',
         expires: expiresAt
       });

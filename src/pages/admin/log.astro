@@ -1,0 +1,359 @@
+---
+// @ts-nocheck
+export const prerender = false;
+import { pool } from '../../lib/db.js';
+import { buildFieldDiff } from '../../lib/auditDiff.js';
+import crypto from 'node:crypto';
+
+const sessionId = Astro.cookies.get('admin_session')?.value;
+if (!sessionId) return Astro.redirect('/admin/login');
+
+const [sessionRows] = await pool.query(`
+  SELECT * FROM Session s JOIN Admin a ON s.admin_id = a.admin_id 
+  WHERE s.session_id = ? AND s.expiration_time > NOW()
+`, [sessionId]);
+
+if (sessionRows.length === 0) {
+  Astro.cookies.delete('admin_session', { path: '/' });
+  return Astro.redirect('/admin/login');
+}
+
+// Ambil parameter filter (tanggal + jam, aksi, akun admin)
+const filterDariWaktu = Astro.url.searchParams.get('dari_waktu')?.trim() || '';
+const filterSampaiWaktu = Astro.url.searchParams.get('sampai_waktu')?.trim() || '';
+const filterAksi = Astro.url.searchParams.get('aksi')?.trim() || '';
+const filterAdmin = Astro.url.searchParams.get('admin')?.trim() || '';
+
+// Ambil seluruh log secara urut dari awal untuk validasi rantai hash yang utuh
+const [allLogs] = await pool.query('SELECT * FROM Admin_Audit_Log ORDER BY id_log ASC');
+
+let expectedPrevHash = '0'.repeat(64);
+const verifiedLogs = allLogs.map((row) => {
+  const recomputedHash = crypto
+    .createHash('sha256')
+    .update(JSON.stringify({
+      prev_hash: row.prev_hash,
+      admin_id: row.admin_id,
+      username: row.username,
+      aksi: row.aksi,
+      entitas: row.entitas,
+      target_id: row.target_id,
+      ringkasan: row.ringkasan,
+      data_sebelum: row.data_sebelum,
+      data_sesudah: row.data_sesudah,
+      ip_address: row.ip_address
+    }))
+    .digest('hex');
+
+  const isChainValid = row.prev_hash === expectedPrevHash && row.current_hash === recomputedHash;
+  expectedPrevHash = row.current_hash;
+
+  const diffs = buildFieldDiff(row.data_sebelum, row.data_sesudah);
+  const changedFields = diffs.filter((d) => d.changed);
+  const unchangedFields = diffs.filter((d) => !d.changed);
+
+  return {
+    ...row,
+    isValid: isChainValid,
+    diffs,
+    changedFields,
+    unchangedFields
+  };
+});
+
+const isAllIntact = verifiedLogs.every((item) => item.isValid);
+
+// Daftar opsi unik untuk dropdown Aksi dan Akun Admin
+const aksiOptions = Array.from(new Set(allLogs.map((r) => r.aksi).filter(Boolean))).sort();
+const adminOptions = Array.from(new Set(allLogs.map((r) => r.username).filter(Boolean))).sort();
+
+// Parse rentang tanggal + jam (format datetime-local: YYYY-MM-DDTHH:mm atau YYYY-MM-DDTHH:mm:ss)
+const dariDate = filterDariWaktu ? new Date(filterDariWaktu) : null;
+const sampaiDate = filterSampaiWaktu ? new Date(filterSampaiWaktu) : null;
+
+// Jika user mengisi sampai_waktu tanpa detik, pastikan mencakup hingga akhir menit tersebut (:59.999)
+if (sampaiDate && !Number.isNaN(sampaiDate.getTime()) && filterSampaiWaktu.length === 16) {
+  sampaiDate.setSeconds(59, 999);
+}
+
+const filteredLogs = verifiedLogs.filter((log) => {
+  if (filterAksi && log.aksi !== filterAksi) return false;
+  if (filterAdmin && log.username !== filterAdmin) return false;
+
+  if (dariDate || sampaiDate) {
+    const logTime = new Date(log.waktu_kejadian);
+    if (dariDate && !Number.isNaN(dariDate.getTime()) && logTime < dariDate) return false;
+    if (sampaiDate && !Number.isNaN(sampaiDate.getTime()) && logTime > sampaiDate) return false;
+  }
+
+  return true;
+});
+
+const hasActiveFilter = Boolean(filterDariWaktu || filterSampaiWaktu || filterAksi || filterAdmin);
+const displayLogs = [...filteredLogs].reverse();
+---
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Audit Log Aktivitas Admin - Admin Panel</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
+    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; position: fixed; display: flex; flex-direction: column; }
+    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
+    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
+    .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
+    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
+
+    .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+
+    .filter-card { background: white; padding: 18px 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end; }
+    .filter-group label { display: block; font-size: 12px; font-weight: bold; color: #374151; margin-bottom: 5px; }
+    .filter-control { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box; background: white; }
+    .filter-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-filter { background: #0076ff; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .btn-filter:hover { background: #005bb5; }
+    .btn-reset { background: #e5e7eb; color: #374151; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; }
+    .btn-reset:hover { background: #d1d5db; }
+
+    .integrity-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; font-weight: bold; }
+    .integrity-bad { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; font-weight: bold; }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+    th { background: #f1f2f6; color: #333; }
+
+    .badge-aksi { background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; }
+
+    .changed-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .pill-changed { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: bold; }
+
+    .status-valid { color: #15803d; font-weight: bold; }
+    .status-tampered { color: #dc2626; font-weight: bold; }
+
+    details summary { cursor: pointer; color: #0076ff; font-weight: bold; font-size: 12px; }
+    .diff-panel { margin-top: 8px; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; min-width: 320px; max-width: 440px; }
+
+    .diff-row { padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+    .diff-row:last-child { margin-bottom: 0; }
+    .diff-row.is-changed { background: #fffbeb; border: 1px solid #f59e0b; }
+    .diff-row.is-same { background: #f3f4f6; color: #6b7280; }
+
+    .diff-label { font-weight: bold; color: #111827; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .tag-hi { background: #f59e0b; color: white; font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+
+    .val-before { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; text-decoration: line-through; display: inline-block; margin-top: 2px; word-break: break-word; }
+    .val-after { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 2px; word-break: break-word; }
+
+    .img-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .img-strip img { width: 58px; height: 42px; object-fit: cover; border-radius: 4px; border: 1px solid #d1d5db; }
+
+    .toggle-same-btn { margin-top: 8px; background: #e5e7eb; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold; color: #374151; }
+    .unchanged-group.hidden { display: none; }
+
+    .empty-state { background: white; padding: 30px; text-align: center; border-radius: 8px; color: #666; border: 1px solid #eee; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/mobil">Kelola Mobil</a>
+    <a href="/admin/mobil/arsip">Arsip Terjual</a>
+    <a href="/admin/promo">Kelola Promo</a>
+    <a href="/admin/log" class="active">Audit Log</a>
+    <a href="/admin/logout" class="logout">Logout</a>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>Audit Log</h1>
+      <span style="font-size: 13px; color: #555;">
+        Menampilkan <strong>{displayLogs.length}</strong> dari <strong>{verifiedLogs.length}</strong> catatan
+      </span>
+    </div>
+
+    {isAllIntact ? (
+      <div class="integrity-ok">
+        &#10003; Integritas Rantai Log Terverifikasi ({verifiedLogs.length} catatan utuh, tidak ada manipulasi data).
+      </div>
+    ) : (
+      <div class="integrity-bad">
+        &#9888; PERINGATAN: Terdeteksi ketidaksesuaian hash pada riwayat log! Ada data yang dimodifikasi di luar sistem.
+      </div>
+    )}
+
+    <form method="GET" action="/admin/log" class="filter-card">
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label for="dariWaktuInput">Dari Tanggal &amp; Jam</label>
+          <input type="datetime-local" id="dariWaktuInput" name="dari_waktu" class="filter-control" value={filterDariWaktu} />
+        </div>
+
+        <div class="filter-group">
+          <label for="sampaiWaktuInput">Sampai Tanggal &amp; Jam</label>
+          <input type="datetime-local" id="sampaiWaktuInput" name="sampai_waktu" class="filter-control" value={filterSampaiWaktu} />
+        </div>
+
+        <div class="filter-group">
+          <label for="aksiSelect">Jenis Aksi</label>
+          <select id="aksiSelect" name="aksi" class="filter-control">
+            <option value="">Semua Aksi</option>
+            {aksiOptions.map((aksi) => (
+              <option value={aksi} selected={filterAksi === aksi}>{aksi}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="adminSelect">Akun Admin</label>
+          <select id="adminSelect" name="admin" class="filter-control">
+            <option value="">Semua Admin</option>
+            {adminOptions.map((adminName) => (
+              <option value={adminName} selected={filterAdmin === adminName}>{adminName}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>&nbsp;</label>
+          <div class="filter-actions">
+            <button type="submit" class="btn-filter">Filter</button>
+            {hasActiveFilter && (
+              <a href="/admin/log" class="btn-reset">Reset</a>
+            )}
+          </div>
+        </div>
+      </div>
+    </form>
+
+    {displayLogs.length === 0 ? (
+      <div class="empty-state">
+        {hasActiveFilter
+          ? 'Tidak ada catatan log yang sesuai dengan filter yang dipilih.'
+          : 'Belum ada aktivitas admin yang tercatat di log.'}
+      </div>
+    ) : (
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Waktu</th>
+            <th>Admin</th>
+            <th>Aksi</th>
+            <th>Ringkasan &amp; Field Berubah</th>
+            <th>Detail Perubahan</th>
+            <th>Integritas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayLogs.map((log, idx) => (
+            <tr>
+              <td>{log.id_log}</td>
+              <td>{new Date(log.waktu_kejadian).toLocaleString('id-ID')}</td>
+              <td>
+                <strong>{log.username}</strong>
+                {log.ip_address && <div style="color:#64748b; font-size:11px;">{log.ip_address}</div>}
+              </td>
+              <td><span class="badge-aksi">{log.aksi}</span></td>
+              <td>
+                <div>{log.ringkasan}</div>
+                {log.changedFields.length > 0 && (
+                  <div class="changed-pills">
+                    {log.changedFields.map((f) => (
+                      <span class="pill-changed">{f.label}</span>
+                    ))}
+                  </div>
+                )}
+              </td>
+              <td>
+                {log.diffs.length > 0 ? (
+                  <details open={log.aksi === 'UPDATE_MOBIL' && idx < 3}>
+                    <summary>Lihat Rincian ({log.changedFields.length} field berubah)</summary>
+                    <div class="diff-panel">
+                      {log.changedFields.map((d) => (
+                        <div class="diff-row is-changed">
+                          <div class="diff-label">
+                            <span>{d.label}</span>
+                            <span class="tag-hi">DIUBAH</span>
+                          </div>
+                          {log.aksi === 'UPDATE_MOBIL' && (
+                            <div><span class="val-before">Sebelum: {d.before}</span></div>
+                          )}
+                          <div><span class="val-after">Sesudah: {d.after}</span></div>
+
+                          {d.key === 'gambar_mobil' && (d.beforeImages.length > 0 || d.afterImages.length > 0) && (
+                            <div style="margin-top:6px;">
+                              {d.beforeImages.length > 0 && (
+                                <div>
+                                  <small style="color:#991b1b;">Foto lama:</small>
+                                  <div class="img-strip">
+                                    {d.beforeImages.map((src) => <img src={src} alt="Foto lama" />)}
+                                  </div>
+                                </div>
+                              )}
+                              {d.afterImages.length > 0 && (
+                                <div style="margin-top:4px;">
+                                  <small style="color:#166534;">Foto baru:</small>
+                                  <div class="img-strip">
+                                    {d.afterImages.map((src) => <img src={src} alt="Foto baru" />)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {log.unchangedFields.length > 0 && (
+                        <div>
+                          <button
+                            type="button"
+                            class="toggle-same-btn"
+                            onclick={`toggleSameFields('same-${log.id_log}')`}
+                          >
+                            + {log.unchangedFields.length} field tidak berubah
+                          </button>
+                          <div id={`same-${log.id_log}`} class="unchanged-group hidden" style="margin-top:6px;">
+                            {log.unchangedFields.map((d) => (
+                              <div class="diff-row is-same">
+                                <strong>{d.label}:</strong> {d.after}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                ) : (
+                  <span style="color:#94a3b8;">-</span>
+                )}
+              </td>
+              <td>
+                {log.isValid ? (
+                  <span class="status-valid" title={`Hash: ${log.current_hash}`}>Valid</span>
+                ) : (
+                  <span class="status-tampered" title={`Hash tidak cocok: ${log.current_hash}`}>Rusak!</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+
+  <script>
+    function toggleSameFields(targetId: string) {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      el.classList.toggle('hidden');
+    }
+
+    (window as unknown as { toggleSameFields: (id: string) => void }).toggleSameFields = toggleSameFields;
+  </script>
+</body>
+</html>
