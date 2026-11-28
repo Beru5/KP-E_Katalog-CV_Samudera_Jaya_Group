@@ -24,19 +24,30 @@ const currentAdmin = sessionRows[0];
 let errorMessage = '';
 let successMessage = '';
 
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+const ALLOWED_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+const MAX_BUKTI_SIZE = 5 * 1024 * 1024; // 5 MB
+
 function removeLocalFiles(imageField) {
-  const uploadRoot = path.resolve('./public');
+  const uploadRoot = path.resolve('./public/uploads');
   let list = [];
   try {
-    list = JSON.parse(imageField || '[]');
+    const parsed = JSON.parse(imageField || '[]');
+    list = Array.isArray(parsed) ? parsed : [parsed];
   } catch {
     list = imageField ? [imageField] : [];
   }
 
   for (const relPath of list) {
     if (typeof relPath === 'string' && relPath.startsWith('/uploads/')) {
-      const fullPath = path.join(uploadRoot, relPath);
-      if (fs.existsSync(fullPath)) {
+      const relativeSubPath = relPath.replace(/^\/uploads\//, '');
+      const fullPath = path.resolve(uploadRoot, relativeSubPath);
+
+      if (
+        fullPath.startsWith(uploadRoot + path.sep) &&
+        fs.existsSync(fullPath) &&
+        fs.statSync(fullPath).isFile()
+      ) {
         fs.unlinkSync(fullPath);
       }
     }
@@ -88,16 +99,19 @@ if (Astro.request.method === 'POST') {
 
       removeLocalFiles(mobil.gambar_mobil);
       return Astro.redirect('/admin/mobil?status=deleted');
-    }
-
-    if (action === 'delete_sold') {
+    } else if (action === 'delete_sold') {
       const buktiFile = formData.get('bukti_penjualan');
       if (!buktiFile || typeof buktiFile !== 'object' || buktiFile.size === 0) {
         throw new Error('Bukti penjualan berupa file gambar wajib diunggah untuk mobil terjual.');
       }
 
-      if (buktiFile.type && !buktiFile.type.startsWith('image/')) {
-        throw new Error('File bukti penjualan harus berupa gambar (JPG, PNG, WEBP, dll).');
+      if (buktiFile.size > MAX_BUKTI_SIZE) {
+        throw new Error('Ukuran file bukti penjualan maksimal 5 MB.');
+      }
+
+      const fileExt = path.extname(buktiFile.name || '').toLowerCase();
+      if (!ALLOWED_IMAGE_TYPES.has(buktiFile.type) || !ALLOWED_IMAGE_EXTS.has(fileExt)) {
+        throw new Error('File bukti penjualan harus berupa gambar berformat JPG, PNG, atau WEBP.');
       }
 
       const uploadDir = path.resolve('./public/uploads/bukti');
@@ -106,9 +120,10 @@ if (Astro.request.method === 'POST') {
       }
 
       const safeName = buktiFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-      const fileName = `bukti-${Date.now()}-${safeName}`;
+      const fileName = `bukti-${Date.now()}-${safeName || `file${fileExt}`}`;
+      const savedFilePath = path.join(uploadDir, fileName);
       const buffer = Buffer.from(await buktiFile.arrayBuffer());
-      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      fs.writeFileSync(savedFilePath, buffer);
       const buktiUrl = `/uploads/bukti/${fileName}`;
 
       const conn = await pool.getConnection();
@@ -156,12 +171,19 @@ if (Astro.request.method === 'POST') {
         await conn.commit();
       } catch (txErr) {
         await conn.rollback();
+        if (fs.existsSync(savedFilePath)) {
+          try {
+            fs.unlinkSync(savedFilePath);
+          } catch {}
+        }
         throw txErr;
       } finally {
         conn.release();
       }
 
       return Astro.redirect('/admin/mobil/arsip?status=sold');
+    } else {
+      throw new Error('Aksi penghapusan tidak valid.');
     }
   } catch (err) {
     console.error('ERROR AKSI MOBIL:', err);
@@ -180,137 +202,759 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Kelola Mobil - Admin Panel</title>
-  <style>
-    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
-    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; position: fixed; display: flex; flex-direction: column; }
-    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
-    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
-    .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
-    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kelola Mobil - Admin Panel | Samudera Jaya Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style is:global>
+    :root {
+      --primary: #b91c1c;
+      --primary-hover: #991b1b;
+      --primary-dark: #450a0a;
+      --bg-page: #f8f9fa;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --white: #ffffff;
+    }
 
-    .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 25px; gap: 12px; flex-wrap: wrap; }
-    .header-actions { display: flex; gap: 10px; }
-    .btn-add { background: #333; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; }
-    .btn-add:hover { background: #555; }
-    .btn-archive { background: #0f766e; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; }
-    .btn-archive:hover { background: #115e59; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
-    .alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      line-height: 1.5;
+    }
 
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-    th { background: #f1f2f6; color: #333; }
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, #2b0606 0%, #140808 100%);
+      color: var(--white);
+      height: 100vh;
+      padding: 28px 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 100;
+    }
 
-    .btn-action { padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; margin-right: 5px; display: inline-block; border: none; cursor: pointer; }
-    .btn-edit { background: #333; color: white; }
-    .btn-edit:hover { background: #555; }
-    .btn-delete { background: #dc2626; color: white; }
-    .btn-delete:hover { background: #b91c1c; }
+    .sidebar-brand {
+      padding-bottom: 22px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-    /* Modal */
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
-    .modal-backdrop.show { display: flex; }
-    .modal-box { background: white; width: 100%; max-width: 480px; border-radius: 10px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .modal-header h3 { margin: 0; font-size: 18px; color: #222; }
-    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #666; }
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-decoration: none;
+    }
 
-    .option-group { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
-    .option-card { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
-    .option-card input { margin-top: 3px; }
-    .option-title { font-weight: bold; font-size: 14px; color: #111827; display: block; }
-    .option-desc { font-size: 12px; color: #6b7280; }
+    .brand-title .brand-main {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ef4444;
+      letter-spacing: 0.5px;
+    }
 
-    .sold-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-    .sold-box.show { display: block; }
-    .sold-box label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #1e293b; }
-    .form-control { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white; }
+    .brand-title .brand-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1.8px;
+    }
 
-    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-    .btn-cancel { background: #e5e7eb; color: #374151; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-confirm-perm { background: #dc2626; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-confirm-sold { background: #0f766e; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .sidebar h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 12px;
+      font-weight: 700;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar a {
+      color: rgba(255, 255, 255, 0.75);
+      text-decoration: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .sidebar a:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: var(--white);
+    }
+
+    .sidebar a.active {
+      background-color: var(--primary);
+      color: var(--white);
+      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.35);
+    }
+
+    .sidebar .logout {
+      margin-top: auto;
+      color: #fca5a5;
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      justify-content: center;
+    }
+
+    .sidebar .logout:hover {
+      background-color: #dc2626;
+      color: var(--white);
+      border-color: #dc2626;
+    }
+
+    /* ================= MAIN CONTENT ================= */
+    .main-content {
+      margin-left: 260px;
+      flex: 1;
+      padding: 40px 48px 64px;
+      min-width: 0;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-archive {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f766e;
+      color: var(--white);
+      padding: 11px 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-archive:hover {
+      background: #115e59;
+      transform: translateY(-1px);
+    }
+
+    .btn-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      color: var(--white);
+      padding: 11px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.25);
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-add:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    /* ================= ALERTS ================= */
+    .alert-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-left: 4px solid #dc2626;
+      padding: 14px 18px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .alert-success {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-left: 4px solid #16a34a;
+      padding: 14px 18px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* ================= TABLE CARD ================= */
+    .table-card {
+      background: var(--white);
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    thead th {
+      background: #f9fafb;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 15px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 16px 18px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 14px;
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr {
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr:hover {
+      background-color: #fafafa;
+    }
+
+    .id-badge {
+      display: inline-block;
+      background: #f3f4f6;
+      color: #374151;
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .car-name {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .car-name strong {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .car-name span {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .kategori-pill {
+      display: inline-block;
+      background: #f3f4f6;
+      color: #4b5563;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .price-cell {
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .transmisi-text {
+      color: #4b5563;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-action {
+      padding: 7px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-edit {
+      background: #1f2937;
+      color: var(--white);
+    }
+
+    .btn-edit:hover {
+      background: #374151;
+    }
+
+    .btn-delete {
+      background: #dc2626;
+      color: var(--white);
+    }
+
+    .btn-delete:hover {
+      background: #b91c1c;
+    }
+
+    /* ================= EMPTY STATE ================= */
+    .empty-state {
+      background: var(--white);
+      padding: 56px 28px;
+      text-align: center;
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    .empty-state h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* ================= MODAL ================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--white);
+      width: 100%;
+      max-width: 500px;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+      border: 1px solid var(--border-color);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .modal-close {
+      background: #f3f4f6;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: #e5e7eb;
+      color: var(--text-main);
+    }
+
+    .modal-subtitle {
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .option-card {
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .option-card:hover {
+      border-color: #d1d5db;
+      background-color: #fafafa;
+    }
+
+    .option-card:has(input:checked) {
+      border-color: var(--primary);
+      background-color: #fef2f2;
+    }
+
+    .option-card input {
+      margin-top: 3px;
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+    }
+
+    .option-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-main);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .option-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .sold-box {
+      display: none;
+      background: #f8fafc;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .sold-box.show {
+      display: block;
+    }
+
+    .sold-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #1e293b;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13.5px;
+      background: var(--white);
+    }
+
+    .sold-hint {
+      color: var(--text-muted);
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .btn-cancel {
+      background: var(--white);
+      color: #4b5563;
+      border: 1.5px solid var(--border-color);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-cancel:hover {
+      background: #f3f4f6;
+    }
+
+    .btn-confirm-perm {
+      background: #dc2626;
+      color: var(--white);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-confirm-perm:hover {
+      background: #b91c1c;
+    }
+
+    .btn-confirm-sold {
+      background: #0f766e;
+      color: var(--white);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-confirm-sold:hover {
+      background: #115e59;
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 20px;
+      }
+
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .sidebar .logout {
+        margin-top: 14px;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 28px 20px 48px;
+      }
+
+      .page-header h1 {
+        font-size: 24px;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="sidebar">
-    <h2>Admin Panel</h2>
-    <a href="/admin/dashboard">Dashboard</a>
-    <a href="/admin/mobil" class="active">Kelola Mobil</a>
-    <a href="/admin/mobil/arsip">Arsip Terjual</a>
-    <a href="/admin/promo">Kelola Promo</a>
-    <a href="/admin/log">Audit Log</a>
-    <a href="/admin/logout" class="logout">Logout</a>
-  </div>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/admin/dashboard" class="brand-title">
+        <span class="brand-main">SAMUDERA JAYA</span>
+        <span class="brand-sub">GROUP</span>
+      </a>
+      <h2>Admin Panel</h2>
+    </div>
 
-  <div class="main-content">
-    <div class="header">
-      <h1>Kelola Informasi Mobil</h1>
+    <nav class="sidebar-nav">
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/mobil" class="active">Kelola Mobil</a>
+      <a href="/admin/mobil/arsip">Arsip Terjual</a>
+      <a href="/admin/promo">Kelola Promo</a>
+      <a href="/admin/log">Audit Log</a>
+    </nav>
+
+    <a href="/admin/logout" class="logout">Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1>Kelola Informasi Mobil</h1>
+        <p class="page-subtitle">Total {mobilRows.length} unit mobil tersedia di katalog Samudera Jaya Group.</p>
+      </div>
       <div class="header-actions">
         <a href="/admin/mobil/arsip" class="btn-archive">Lihat Arsip Terjual</a>
         <a href="/admin/mobil/create" class="btn-add">+ Tambah Mobil Baru</a>
       </div>
     </div>
 
-    {errorMessage && <div class="alert-error">{errorMessage}</div>}
-    {successMessage && <div class="alert-success">{successMessage}</div>}
+    {errorMessage && <div class="alert-error" role="alert">{errorMessage}</div>}
+    {successMessage && <div class="alert-success" role="status">{successMessage}</div>}
 
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Brand & Model</th>
-          <th>Kategori</th>
-          <th>Harga</th>
-          <th>Transmisi</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        {mobilRows.map((mobil) => (
-          <tr>
-            <td>{mobil.id_mobil}</td>
-            <td><strong>{mobil.brand_mobil}</strong> {mobil.model_mobil}</td>
-            <td>{mobil.kategori_mobil}</td>
-            <td>Rp {Number(mobil.harga).toLocaleString('id-ID')}</td>
-            <td>{mobil.transmisi}</td>
-            <td>
-              <a href={`/admin/mobil/${mobil.id_mobil}`} class="btn-action btn-edit">Edit</a>
-              <button
-                type="button"
-                class="btn-action btn-delete"
-                onclick={`openDeleteModal('${mobil.id_mobil}', '${String(mobil.brand_mobil + ' ' + mobil.model_mobil).replace(/'/g, "\\'")}')`}
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+    {mobilRows.length === 0 ? (
+      <div class="empty-state">
+        <h3>Belum Ada Data Mobil</h3>
+        <p>Katalog mobil saat ini masih kosong. Tambahkan unit baru untuk mulai menampilkan daftar kendaraan.</p>
+        <a href="/admin/mobil/create" class="btn-add">+ Tambah Mobil Baru</a>
+      </div>
+    ) : (
+      <div class="table-card">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Brand &amp; Model</th>
+                <th>Kategori</th>
+                <th>Harga</th>
+                <th>Transmisi</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mobilRows.map((mobil) => (
+                <tr>
+                  <td><span class="id-badge">#{mobil.id_mobil}</span></td>
+                  <td>
+                    <div class="car-name">
+                      <strong>{mobil.brand_mobil}</strong>
+                      <span>{mobil.model_mobil}</span>
+                    </div>
+                  </td>
+                  <td><span class="kategori-pill">{mobil.kategori_mobil}</span></td>
+                  <td class="price-cell">Rp {Number(mobil.harga).toLocaleString('id-ID')}</td>
+                  <td class="transmisi-text">{mobil.transmisi}</td>
+                  <td>
+                    <div class="action-group">
+                      <a href={`/admin/mobil/${mobil.id_mobil}`} class="btn-action btn-edit">Edit</a>
+                      <button
+                        type="button"
+                        class="btn-action btn-delete js-delete-btn"
+                        data-id={String(mobil.id_mobil)}
+                        data-label={`${mobil.brand_mobil} ${mobil.model_mobil}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </main>
 
   <!-- Modal Pilihan Delete -->
   <div id="deleteModal" class="modal-backdrop">
     <div class="modal-box">
       <div class="modal-header">
         <h3>Hapus Data Mobil</h3>
-        <button type="button" class="modal-close" onclick="closeDeleteModal()">&times;</button>
+        <button type="button" class="modal-close" id="closeModalBtn">&times;</button>
       </div>
-      <p style="margin: 0; font-size: 14px; color: #4b5563;">
+      <p class="modal-subtitle">
         Pilih alasan penghapusan untuk <strong id="modalMobilLabel"></strong>:
       </p>
 
       <form method="POST" enctype="multipart/form-data" id="deleteForm">
         <input type="hidden" name="id_mobil" id="modalIdMobil" />
+        <input type="hidden" name="action" id="modalActionInput" value="delete_permanent" />
 
         <div class="option-group">
           <label class="option-card">
-            <input type="radio" name="delete_mode" value="permanent" checked onchange="toggleDeleteMode()" />
+            <input type="radio" name="delete_mode" value="permanent" checked />
             <span>
               <span class="option-title">Salah Input / Hapus Permanen</span>
               <span class="option-desc">Menghapus data secara permanen dari sistem (tidak masuk ke arsip terjual).</span>
@@ -318,7 +962,7 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
           </label>
 
           <label class="option-card">
-            <input type="radio" name="delete_mode" value="sold" onchange="toggleDeleteMode()" />
+            <input type="radio" name="delete_mode" value="sold" />
             <span>
               <span class="option-title">Mobil Terjual (Pindahkan ke Arsip)</span>
               <span class="option-desc">Memindahkan data ke halaman arsip terjual dan wajib menyertakan bukti gambar.</span>
@@ -328,12 +972,12 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
 
         <div id="soldProofBox" class="sold-box">
           <label for="buktiInput">Bukti Penjualan (File Gambar Wajib)</label>
-          <input type="file" id="buktiInput" name="bukti_penjualan" class="form-control" accept="image/*" />
-          <small style="color:#64748b; display:block; margin-top:6px;">Contoh: foto kwitansi, nota serah terima, atau bukti transfer.</small>
+          <input type="file" id="buktiInput" name="bukti_penjualan" class="form-control" accept="image/jpeg,image/png,image/webp" />
+          <span class="sold-hint">Format JPG, PNG, atau WEBP (maks. 5 MB). Contoh: foto kwitansi, nota serah terima, atau bukti transfer.</span>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Batal</button>
+          <button type="button" class="btn-cancel" id="cancelModalBtn">Batal</button>
           <button type="submit" id="confirmBtn" class="btn-confirm-perm">Hapus Permanen</button>
         </div>
       </form>
@@ -343,11 +987,17 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
   <script>
     const modal = document.getElementById('deleteModal') as HTMLElement | null;
     const modalIdMobil = document.getElementById('modalIdMobil') as HTMLInputElement | null;
+    const modalActionInput = document.getElementById('modalActionInput') as HTMLInputElement | null;
     const modalMobilLabel = document.getElementById('modalMobilLabel') as HTMLElement | null;
     const soldProofBox = document.getElementById('soldProofBox') as HTMLElement | null;
     const buktiInput = document.getElementById('buktiInput') as HTMLInputElement | null;
     const confirmBtn = document.getElementById('confirmBtn') as HTMLButtonElement | null;
     const deleteForm = document.getElementById('deleteForm') as HTMLFormElement | null;
+    const closeModalBtn = document.getElementById('closeModalBtn') as HTMLButtonElement | null;
+    const cancelModalBtn = document.getElementById('cancelModalBtn') as HTMLButtonElement | null;
+
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
     function openDeleteModal(id: string, label: string) {
       if (!modal || !modalIdMobil || !modalMobilLabel || !deleteForm || !buktiInput) return;
@@ -371,17 +1021,19 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
     }
 
     function toggleDeleteMode() {
-      if (!deleteForm || !soldProofBox || !buktiInput || !confirmBtn) return;
+      if (!deleteForm || !soldProofBox || !buktiInput || !confirmBtn || !modalActionInput) return;
 
       const selectedRadio = deleteForm.querySelector('input[name="delete_mode"]:checked') as HTMLInputElement | null;
       const selected = selectedRadio ? selectedRadio.value : 'permanent';
 
       if (selected === 'sold') {
+        modalActionInput.value = 'delete_sold';
         soldProofBox.classList.add('show');
         buktiInput.required = true;
         confirmBtn.textContent = 'Simpan ke Arsip Terjual';
         confirmBtn.className = 'btn-confirm-sold';
       } else {
+        modalActionInput.value = 'delete_permanent';
         soldProofBox.classList.remove('show');
         buktiInput.required = false;
         confirmBtn.textContent = 'Hapus Permanen';
@@ -389,24 +1041,42 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
       }
     }
 
+    document.querySelectorAll<HTMLButtonElement>('.js-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id || '';
+        const label = btn.dataset.label || '';
+        openDeleteModal(id, label);
+      });
+    });
+
     if (deleteForm) {
+      deleteForm.querySelectorAll<HTMLInputElement>('input[name="delete_mode"]').forEach((radio) => {
+        radio.addEventListener('change', toggleDeleteMode);
+      });
+
       deleteForm.addEventListener('submit', (e) => {
         const selectedRadio = deleteForm.querySelector('input[name="delete_mode"]:checked') as HTMLInputElement | null;
         const selected = selectedRadio ? selectedRadio.value : 'permanent';
 
-        let hiddenAction = deleteForm.querySelector('input[name="action"]') as HTMLInputElement | null;
-        if (!hiddenAction) {
-          hiddenAction = document.createElement('input');
-          hiddenAction.type = 'hidden';
-          hiddenAction.name = 'action';
-          deleteForm.appendChild(hiddenAction);
+        if (modalActionInput) {
+          modalActionInput.value = selected === 'sold' ? 'delete_sold' : 'delete_permanent';
         }
-        hiddenAction.value = selected === 'sold' ? 'delete_sold' : 'delete_permanent';
 
         if (selected === 'sold') {
-          if (!buktiInput || !buktiInput.files || buktiInput.files.length === 0) {
+          const file = buktiInput?.files?.[0];
+          if (!file) {
             e.preventDefault();
             alert('Silakan pilih file gambar bukti penjualan terlebih dahulu.');
+            return;
+          }
+          if (!ALLOWED_TYPES.includes(file.type)) {
+            e.preventDefault();
+            alert('Format file bukti penjualan harus berupa JPG, PNG, atau WEBP.');
+            return;
+          }
+          if (file.size > MAX_SIZE_BYTES) {
+            e.preventDefault();
+            alert('Ukuran file bukti penjualan maksimal 5 MB.');
             return;
           }
           if (!confirm('Tandai mobil ini sebagai TERJUAL dan pindahkan ke halaman arsip?')) {
@@ -420,20 +1090,14 @@ const [mobilRows] = await pool.query('SELECT * FROM Mobil ORDER BY id_mobil DESC
       });
     }
 
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeDeleteModal);
+    if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeDeleteModal);
+
     if (modal) {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) closeDeleteModal();
       });
     }
-
-    (window as unknown as {
-      openDeleteModal: (id: string, label: string) => void;
-      closeDeleteModal: () => void;
-      toggleDeleteMode: () => void;
-    }).openDeleteModal = openDeleteModal;
-
-    (window as unknown as { closeDeleteModal: () => void }).closeDeleteModal = closeDeleteModal;
-    (window as unknown as { toggleDeleteMode: () => void }).toggleDeleteMode = toggleDeleteMode;
   </script>
 </body>
 </html>

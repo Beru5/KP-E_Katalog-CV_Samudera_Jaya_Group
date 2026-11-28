@@ -23,63 +23,513 @@ if (!promo) {
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Detail Promo - {promo.promo_judul}</title>
-  <style>
-    body { font-family: sans-serif; margin: 40px; background: #f9f9f9; }
-    .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #0076ff; }
-    .detail-container { 
-      background: white; 
-      padding: 30px; 
-      border-radius: 8px; 
-      border: 1px solid #ddd; 
-      max-width: 700px; 
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detail Promo - {promo.promo_judul} | Samudera Jaya Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style is:global>
+    :root {
+      --primary: #b91c1c;
+      --primary-hover: #991b1b;
+      --primary-dark: #450a0a;
+      --bg-page: #f8f9fa;
+      --bg-dark: #140808;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+    }
+
+    /* ================= NAVBAR ================= */
+    .navbar {
+      background: linear-gradient(90deg, #2b0606 0%, #5c0d0d 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-logo {
+      text-decoration: none;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .brand-logo .brand-main {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ef4444;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-logo .brand-sub {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      transition: color 0.2s ease;
+      position: relative;
+      padding-bottom: 4px;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--white);
+    }
+
+    .nav-links a.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: #ef4444;
+      border-radius: 2px;
+    }
+
+    /* ================= HERO HEADER ================= */
+    .page-header {
+      background: linear-gradient(135deg, #3b0707 0%, #1a0404 100%);
+      color: var(--white);
+      padding: 40px 24px 72px;
+      border-bottom: 4px solid var(--primary);
+    }
+
+    .header-container {
+      max-width: 860px;
       margin: 0 auto;
     }
-    .detail-container h1 { margin-top: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .back-link:hover {
+      color: var(--white);
+      transform: translateX(-4px);
+    }
+
+    .header-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #fca5a5;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .page-header h2 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    /* ================= MAIN CONTENT ================= */
+    .main-container {
+      max-width: 860px;
+      width: 100%;
+      margin: -48px auto 0;
+      padding: 0 24px 80px;
+      flex: 1;
+    }
+
+    .detail-container {
+      background: var(--white);
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .promo-banner {
+      width: 100%;
+      height: 400px;
+      object-fit: cover;
+      display: block;
+      background-color: #f3f4f6;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .detail-body {
+      padding: 36px 40px 44px;
+    }
+
     .badge {
       display: inline-block;
-      background: #ff4757;
-      color: white;
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: bold;
+      background: #fef2f2;
+      color: var(--primary);
+      border: 1px solid #fecaca;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
     }
-    .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    .info-table td { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-    .info-table td:first-child { font-weight: bold; color: #666; width: 35%; }
+
+    .detail-body h1 {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f3f4f6;
+    }
+
+    /* ================= INFO TABLE ================= */
+    .info-box {
+      background-color: #f9fafb;
+      border: 1px solid #f3f4f6;
+      border-radius: 14px;
+      padding: 8px 24px;
+      margin-bottom: 32px;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .info-table tr:not(:last-child) td {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-table td {
+      padding: 14px 0;
+      font-size: 15px;
+    }
+
+    .info-table td:first-child {
+      font-weight: 600;
+      color: var(--text-muted);
+      width: 38%;
+    }
+
+    .info-table td:last-child {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* ================= TERMS & DESCRIPTION ================= */
+    .terms-section h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .terms-section h3::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 20px;
+      background-color: var(--primary);
+      border-radius: 2px;
+    }
+
+    .promo-desc {
+      line-height: 1.8;
+      color: #4b5563;
+      font-size: 15px;
+      white-space: pre-line;
+    }
+
+    .detail-actions {
+      margin-top: 36px;
+      padding-top: 28px;
+      border-top: 1px solid #f3f4f6;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: var(--white);
+      padding: 12px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: var(--text-main);
+      border: 1.5px solid var(--border-color);
+      padding: 12px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #fef2f2;
+    }
+
+    /* ================= FOOTER ================= */
+    .footer {
+      background-color: var(--bg-dark);
+      color: rgba(255, 255, 255, 0.75);
+      padding: 56px 24px 28px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    .footer-col h4 {
+      color: var(--white);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .footer-col p {
+      font-size: 14px;
+      line-height: 1.7;
+      margin-top: 12px;
+    }
+
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-links a {
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: #ef4444;
+    }
+
+    .footer-bottom {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 768px) {
+      .nav-container {
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .nav-links {
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .promo-banner {
+        height: 240px;
+      }
+
+      .detail-body {
+        padding: 24px 20px 32px;
+      }
+
+      .detail-body h1 {
+        font-size: 24px;
+      }
+
+      .info-table td:first-child {
+        width: 45%;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <a href="/" class="back-link">&larr; Kembali ke Utama</a>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="brand-logo">
+        <span class="brand-main">SAMUDERA JAYA</span>
+        <span class="brand-sub">GROUP</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/">BERANDA</a></li>
+        <li><a href="/promo" class="active">PROMO</a></li>
+        <li><a href="/#pilih-mobil">BELI MOBIL</a></li>
+        <li><a href="/about">ABOUT US</a></li>
+        <li><a href="/wishlist">WISHLIST</a></li>
+      </ul>
+    </div>
+  </nav>
 
-  <div class="detail-container">
-    <img 
-      src={promo.promo_gambar || `/../public/${promo.promo_gambar}.jpg`} alt={`${promo.promo_gambar}`} 
-      style="width: 100%; height: 350px; object-fit: cover; border-radius: 6px;" 
-    />
-    
-    <h1>{promo.promo_judul}</h1>
-    <span class="badge">{promo.promo_kategori}</span>
+  <!-- HERO HEADER -->
+  <header class="page-header">
+    <div class="header-container">
+      <a href="/" class="back-link">&larr; Kembali ke Utama</a>
+      <div class="header-label">Penawaran Spesial</div>
+      <h2>Detail Promo</h2>
+    </div>
+  </header>
 
-    <table class="info-table">
-      <tr>
-        <td>Tanggal Mulai</td>
-        <td>{new Date(promo.promo_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-      </tr>
-      <tr>
-        <td>Tanggal Berakhir</td>
-        <td>{new Date(promo.promo_berakhir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-      </tr>
-    </table>
+  <!-- MAIN CONTENT -->
+  <main class="main-container">
+    <div class="detail-container">
+      <img
+        src={promo.promo_gambar || `/../public/${promo.promo_gambar}.jpg`}
+        alt={`${promo.promo_gambar}`}
+        class="promo-banner"
+      />
 
-    <h3>Syarat & Ketentuan Promo:</h3>
-    <p style="line-height: 1.6; color: #555; whitespace: pre-line;">
-      {promo.promo_deskripsi || 'Tidak ada deskripsi detail promo.'}
-    </p>
-  </div>
+      <div class="detail-body">
+        <span class="badge">{promo.promo_kategori}</span>
+        <h1>{promo.promo_judul}</h1>
+
+        <div class="info-box">
+          <table class="info-table">
+            <tr>
+              <td>Tanggal Mulai</td>
+              <td>{new Date(promo.promo_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+            </tr>
+            <tr>
+              <td>Tanggal Berakhir</td>
+              <td>{new Date(promo.promo_berakhir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="terms-section">
+          <h3>Syarat & Ketentuan Promo</h3>
+          <p class="promo-desc">
+            {promo.promo_deskripsi || 'Tidak ada deskripsi detail promo.'}
+          </p>
+        </div>
+
+        <div class="detail-actions">
+          <a href="/#pilih-mobil" class="btn-primary">Lihat Katalog Mobil</a>
+          <a href="/" class="btn-outline">Kembali ke Beranda</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <a href="/" class="brand-logo">
+          <span class="brand-main">SAMUDERA JAYA</span>
+          <span class="brand-sub">GROUP</span>
+        </a>
+        <p>Dealer mobil terpercaya di Pontianak, Kalimantan Barat dengan pilihan unit berkualitas, transparan, dan siap pakai untuk kebutuhan berkendara Anda.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigasi</h4>
+        <ul class="footer-links">
+          <li><a href="/">Beranda</a></li>
+          <li><a href="/#pilih-mobil">Katalog Mobil</a></li>
+          <li><a href="/promo">Promo</a></li>
+          <li><a href="/wishlist">Wishlist Saya</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Kontak Kami</h4>
+        <ul class="footer-links">
+          <li>Jl. A.Yani No. 123, Pontianak, Kalimantan Barat</li>
+          <li>0812-3456-7890</li>
+          <li>Senin - Sabtu: 08:00 - 17:00 WIB</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      &copy; 2026 Samudera Jaya Group. All rights reserved.
+    </div>
+  </footer>
 
 </body>
 </html>

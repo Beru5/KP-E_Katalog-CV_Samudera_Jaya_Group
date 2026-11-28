@@ -51,310 +51,409 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Katalog & Rekomendasi SPK Mobil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samudera Jaya Group - Dealer Mobil Terpercaya</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; margin: 40px; background: #f9f9f9; }
+    :root {
+      --primary-red: #e51b24;
+      --primary-red-hover: #c4151e;
+      --spk-green: #16a34a;
+      --spk-green-hover: #15803d;
+      --text-dark: #1a1a1a;
+      --text-gray: #666666;
+      --bg-light: #f8f9fa;
+      --border-color: #e5e7eb;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background-color: #ffffff; color: var(--text-dark); }
+    a { text-decoration: none; color: inherit; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+
+    /* NAVBAR */
+    .navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: #fff; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; color: var(--text-dark); }
+    .nav-logo span { color: var(--primary-red); }
+    .nav-links { display: flex; gap: 30px; font-weight: 500; font-size: 15px; }
+    .nav-links a:hover { color: var(--primary-red); }
+    .nav-actions { display: flex; align-items: center; gap: 20px; font-size: 14px; font-weight: 500; }
+    .btn-red { background: var(--primary-red); color: white; padding: 10px 24px; border-radius: 6px; font-weight: 600; transition: 0.3s; border: none; cursor: pointer; }
+    .btn-red:hover { background: var(--primary-red-hover); }
+    .btn-outline-white { background: transparent; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 600; border: 2px solid white; transition: 0.3s; cursor: pointer; }
+    .btn-outline-white:hover { background: white; color: var(--text-dark); }
+
+    /* HERO SECTION */
+    .hero { position: relative; height: 600px; background: url('https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=2000') center/cover no-repeat; display: flex; align-items: center; }
+    .hero::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%); }
+    .hero-content { position: relative; z-index: 10; color: white; max-width: 600px; padding-left: 5%; }
+    .badge-info { background: var(--primary-red); color: white; padding: 4px 10px; font-size: 12px; font-weight: 700; border-radius: 4px; display: inline-block; margin-bottom: 20px; letter-spacing: 1px; }
+    .hero h1 { font-size: 46px; font-weight: 800; line-height: 1.2; margin-bottom: 20px; }
+    .hero p { font-size: 16px; color: #ddd; margin-bottom: 30px; line-height: 1.6; }
+    .hero-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+
+    /* FILTER SECTION */
+    .filter-section { margin-top: 40px; padding: 0 20px; }
+    .filter-section h2 { text-align: center; font-size: 28px; font-weight: 800; margin-bottom: 5px; }
+    .filter-section p.subtitle { text-align: center; color: var(--primary-red); font-size: 14px; font-weight: 600; margin-bottom: 30px; }
     
-    .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .search-input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; flex: 1; min-width: 250px; }
-    .btn-filter-modal, .btn-spk-modal, .btn-wishlist-nav {
-      background: #333; color: white; padding: 12px 20px; border: none; border-radius: 6px;
-      cursor: pointer; font-size: 15px; font-weight: bold; text-decoration: none;
-      display: inline-flex; align-items: center;
-    }
-    .btn-filter-modal:hover, .btn-spk-modal:hover, .btn-wishlist-nav:hover { background: #555; }
+    .search-toolbar { display: flex; gap: 12px; max-width: 1000px; margin: 0 auto 20px auto; flex-wrap: wrap; }
+    .search-box { flex: 1; min-width: 260px; position: relative; }
+    .search-box input { width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; outline: none; }
+    .search-box input:focus { border-color: var(--primary-red); }
 
-    .carousel-container {
-      position: relative; width: 100%; max-width: 1200px; margin: 0 auto 30px auto;
-      overflow: hidden; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #000;
+    .btn-spk-trigger {
+      background: var(--text-dark); color: white; padding: 14px 22px; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap;
     }
-    .carousel-track { display: flex; transition: transform 0.4s ease-in-out; width: 100%; }
-    .carousel-slide { min-width: 100%; position: relative; height: 320px; }
-    .carousel-slide img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
-    .carousel-caption {
-      position: absolute; bottom: 0; left: 0; right: 0; padding: 25px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.85)); color: white;
-    }
-    .carousel-caption h2 { margin: 0 0 8px 0; font-size: 24px; }
-    .carousel-caption p { margin: 0 0 12px 0; font-size: 14px; color: #ddd; }
-    .btn-promo-detail {
-      display: inline-block; background: #ff4757; color: white; padding: 8px 16px;
-      border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;
-    }
-    .carousel-btn {
-      position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 0, 0, 0.5);
-      color: white; border: none; font-size: 24px; padding: 12px 16px; cursor: pointer;
-      border-radius: 50%; z-index: 10;
-    }
-    .carousel-btn:hover { background: rgba(0, 0, 0, 0.8); }
-    .prev-btn { left: 15px; }
-    .next-btn { right: 15px; }
-    .carousel-dots { position: absolute; bottom: 15px; right: 25px; display: flex; gap: 8px; }
-    .dot { width: 10px; height: 10px; background: rgba(255, 255, 255, 0.5); border-radius: 50%; cursor: pointer; }
-    .dot.active { background: white; }
+    .btn-spk-trigger:hover { background: var(--primary-red); }
+    
+    .filter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; max-width: 1000px; margin: 0 auto 15px auto; }
+    .filter-grid-secondary { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 15px; max-width: 1000px; margin: 0 auto 30px auto; align-items: end; }
+    .filter-group { display: flex; flex-direction: column; gap: 8px; }
+    .filter-group label { font-size: 12px; font-weight: 600; color: var(--text-gray); text-transform: uppercase; }
+    .filter-group select, .filter-group input[type="number"] { padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; outline: none; background: white; width: 100%; }
+    .filter-group select:focus, .filter-group input[type="number"]:focus { border-color: var(--primary-red); }
 
-    .card-slider { position: relative; width: 100%; height: 150px; overflow: hidden; border-radius: 4px; margin-bottom: 10px; background: #eee; }
-    .card-track { display: flex; height: 100%; transition: transform 0.3s ease-in-out; width: 100%; }
+    .tax-checkbox-inline { display: flex; align-items: center; gap: 8px; height: 43px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-light); cursor: pointer; font-size: 14px; font-weight: 500; }
+    .tax-checkbox-inline input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary-red); }
+
+    .btn-reset-inline { height: 43px; padding: 0 18px; background: white; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; font-weight: 600; color: var(--text-gray); cursor: pointer; transition: 0.2s; }
+    .btn-reset-inline:hover { border-color: var(--primary-red); color: var(--primary-red); }
+
+    /* CAR GRID */
+    .catalog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .catalog-header .result-count { font-size: 14px; color: var(--text-gray); font-weight: 500; }
+    .spk-status-info { font-size: 14px; color: var(--spk-green); font-weight: 700; }
+    
+    .car-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-bottom: 60px; }
+    .car-card { border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white; transition: 0.3s; display: flex; flex-direction: column; position: relative; }
+    .car-card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.08); transform: translateY(-5px); }
+
+    /* CARD SLIDER */
+    .card-img { position: relative; height: 210px; background: #eee; overflow: hidden; }
+    .card-track { display: flex; height: 100%; width: 100%; transition: transform 0.3s ease-in-out; }
     .card-slide { min-width: 100%; height: 100%; }
     .card-slide img { width: 100%; height: 100%; object-fit: cover; }
     .card-btn {
-      position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5);
-      color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
-      font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 5;
+      position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.55);
+      color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+      font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 5; transition: 0.2s;
     }
-    .card-btn:hover { background: rgba(0,0,0,0.8); }
-    .card-prev { left: 5px; }
-    .card-next { right: 5px; }
+    .card-btn:hover { background: rgba(0,0,0,0.85); }
+    .card-prev { left: 8px; }
+    .card-next { right: 8px; }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-    .card {
-      background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd;
-      display: flex; flex-direction: column; position: relative;
-    }
-    .card .badge-spk {
-      position: absolute; top: 10px; right: 10px; background: #2ed573; color: white;
-      padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; z-index: 6;
-    }
-    .btn {
-      display: inline-block; background: #0076ff; color: white; padding: 8px 12px;
-      text-decoration: none; border-radius: 4px; margin-top: auto; text-align: center;
-    }
+    .card-tag { position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.92); padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; color: var(--text-dark); z-index: 6; }
+    .badge-spk { position: absolute; top: 12px; right: 12px; background: var(--spk-green); color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; z-index: 6; display: none; }
     
+    .card-content { padding: 16px; display: flex; flex-direction: column; flex: 1; }
+    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .card-price { font-size: 18px; font-weight: 800; color: var(--primary-red); margin-bottom: 10px; }
+    .card-meta { font-size: 12px; color: var(--text-gray); line-height: 1.5; margin-bottom: 16px; }
+    .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px; }
+    .card-spec { font-size: 13px; color: var(--text-gray); font-weight: 500; background: var(--bg-light); padding: 6px 10px; border-radius: 4px; }
+    .btn-detail { background: white; border: 1px solid var(--border-color); color: var(--text-dark); padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; transition: 0.2s; }
+    .btn-detail:hover { border-color: var(--primary-red); color: var(--primary-red); }
+
+    /* PROMO SECTION */
+    .promo-section { margin-bottom: 60px; padding-top: 40px; border-top: 1px solid var(--border-color); }
+    .promo-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+    .promo-header h2 { font-size: 24px; font-weight: 800; margin-bottom: 5px; }
+    .promo-header p { color: var(--text-gray); font-size: 14px; }
+    
+    .promo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+    .promo-card { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; transition: 0.2s; }
+    .promo-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    .promo-card img { width: 100%; height: 160px; object-fit: cover; }
+    .promo-body { padding: 15px; }
+    .promo-date { font-size: 12px; color: var(--primary-red); font-weight: 700; margin-bottom: 8px; display: block; }
+    .promo-title { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--text-dark); }
+    .btn-all-promo { display: block; width: max-content; margin: 30px auto 0 auto; padding: 12px 24px; background: white; border: 1px solid var(--border-color); border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+    .btn-all-promo:hover { border-color: var(--primary-red); color: var(--primary-red); }
+
+    /* MODAL SPK */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.55); z-index: 1000; justify-content: center; align-items: center; padding: 20px;
     }
     .modal-content {
-      background: white; padding: 25px; border-radius: 10px; width: 90%;
-      max-width: 550px; max-height: 90vh; overflow-y: auto;
+      background: white; padding: 25px; border-radius: 12px; width: 100%;
+      max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     }
     .modal-header {
       display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px;
+      border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 18px;
     }
-    .modal-header h3 { margin: 0; }
-    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #888; }
-    
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #444; }
-    .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
-    
-    .price-range { display: flex; gap: 10px; }
-    .price-range input[type="number"] { width: 50%; }
-    
-    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 0; border-top: 1px solid #eee; }
-    .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
-    .checkbox-group label { margin: 0; font-size: 15px; cursor: pointer; display: inline-block; color: #333; }
+    .modal-header h3 { font-size: 18px; font-weight: 800; }
+    .close-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: var(--text-gray); line-height: 1; }
+    .close-btn:hover { color: var(--primary-red); }
 
-    .modal-footer { display: flex; gap: 10px; margin-top: 25px; }
-    .btn-apply { background: #0076ff; color: white; border: none; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
-    .btn-spk-submit { background: #2ed573; color: white; border: none; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
-    .btn-reset { background: #f1f2f6; color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: bold; }
-    
-    .spk-section-title {
-      font-size: 15px; font-weight: bold; color: #333; margin: 15px 0 10px 0;
-      text-transform: uppercase; border-bottom: 2px solid #555; padding-bottom: 4px;
-    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: var(--text-dark); }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; outline: none; }
+    .form-control:focus { border-color: var(--primary-red); }
+    .price-range { display: flex; gap: 10px; }
+    .price-range input { width: 50%; }
+
+    .checkbox-group { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+    .checkbox-group input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary-red); }
+    .checkbox-group label { margin: 0; cursor: pointer; font-weight: 500; }
 
     .accordion-header {
-      background: #f1f2f6; color: #333; padding: 12px 15px; width: 100%;
-      border: 1px solid #ddd; border-radius: 6px; font-weight: bold; text-align: left;
+      background: var(--bg-light); color: var(--text-dark); padding: 12px 15px; width: 100%;
+      border: 1px solid var(--border-color); border-radius: 8px; font-weight: 700; text-align: left;
       cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px;
     }
-    .accordion-header:hover { background: #e4e7eb; }
     .accordion-body {
-      display: none; padding: 15px 5px 5px 5px; border: 1px solid #eee;
-      border-top: none; border-radius: 0 0 6px 6px; margin-bottom: 15px; background: #fff;
+      display: none; padding: 15px; border: 1px solid var(--border-color);
+      border-top: none; border-radius: 0 0 8px 8px; margin-bottom: 15px; background: #fff;
     }
     .accordion-body.open { display: block; }
 
-    .criteria-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-    .criterion-chip {
-      padding: 8px 14px; background: #f1f2f6; border: 2px solid #ccc; border-radius: 20px;
-      cursor: pointer; font-weight: bold; font-size: 13px; user-select: none; transition: all 0.2s;
+    .spk-section-title {
+      font-size: 14px; font-weight: 800; color: var(--text-dark); margin: 18px 0 8px 0;
+      text-transform: uppercase; border-bottom: 2px solid var(--primary-red); padding-bottom: 4px;
     }
-    .criterion-chip:hover { background: #e4e7eb; }
-    .criterion-chip.selected { background: #0076ff; color: white; border-color: #005bb5; }
+    .criteria-picker { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .criterion-chip {
+      padding: 8px 14px; background: var(--bg-light); border: 1.5px solid var(--border-color); border-radius: 20px;
+      cursor: pointer; font-weight: 600; font-size: 13px; user-select: none; transition: 0.2s;
+    }
+    .criterion-chip:hover { border-color: var(--primary-red); }
+    .criterion-chip.selected { background: var(--primary-red); color: white; border-color: var(--primary-red); }
+    .priority-box { background: var(--bg-light); padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 10px; }
     .priority-slot-item {
       display: flex; justify-content: space-between; align-items: center; background: white;
-      padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;
+      padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;
+    }
+    .cc-pref-box { display: none; margin-top: 15px; background: var(--bg-light); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); }
+
+    .modal-footer { display: flex; gap: 10px; margin-top: 22px; }
+    .btn-spk-submit { background: var(--spk-green); color: white; border: none; padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: 700; font-size: 14px; }
+    .btn-spk-submit:hover { background: var(--spk-green-hover); }
+    .btn-reset-modal { background: var(--bg-light); color: var(--text-dark); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; flex: 1; cursor: pointer; font-weight: 600; font-size: 14px; }
+
+    /* FOOTER */
+    .footer { background: white; border-top: 1px solid var(--border-color); padding: 60px 20px 30px 20px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; max-width: 1280px; margin: 0 auto; }
+    .footer-logo { font-size: 20px; font-weight: 800; margin-bottom: 15px; }
+    .footer-logo span { color: var(--primary-red); }
+    .footer-desc { font-size: 13px; color: var(--text-gray); line-height: 1.6; margin-bottom: 20px; }
+    .footer h4 { font-size: 14px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; }
+    .footer ul { list-style: none; }
+    .footer ul li { margin-bottom: 12px; font-size: 13px; color: var(--text-gray); }
+    .footer ul li a:hover { color: var(--primary-red); }
+    .btn-whatsapp { display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; margin-top: 15px; }
+    .footer-bottom { border-top: 1px solid var(--border-color); max-width: 1280px; margin: 40px auto 0 auto; padding-top: 20px; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-gray); }
+
+    @media (max-width: 768px) {
+      .filter-grid, .filter-grid-secondary, .footer-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .hero h1 { font-size: 32px; }
     }
   </style>
 </head>
 <body>
 
-  <h1>CV Samudera Jaya Group</h1>
-  
-  <div class="toolbar">
-    <input type="text" id="searchName" class="search-input" placeholder="Cari nama atau model mobil..." />
-    <button id="openModalBtn" class="btn-filter-modal">Sort & Filter</button>
-    <button id="openSpkModalBtn" class="btn-spk-modal">Fitur Rekomendasi (SPK)</button>
-    <a href="/wishlist" class="btn-wishlist-nav">Wishlist</a>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <span>Samudera</span> Jaya Group
+    </div>
+    <div class="nav-links">
+      <a href="/">Beranda</a>
+      <a href="/promo">Promo</a>
+      <a href="#pilih-mobil">Beli Mobil</a>
+      <a href="/about">About Us</a>
+      <a href="/wishlist">Wishlist</a>
+    </div>
+    <div class="nav-actions">
+      <span>📍 Pontianak</span>
+      <a href="/login">👤 Login / Daftar</a>
+      <button class="btn-red">Hubungi Kami</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-content">
+      <div class="badge-info">INFO LAPANGAN</div>
+      <h1>Temukan Mobil Impian Anda di Samudera Jaya Group</h1>
+      <p>Dealer resmi terpercaya di Pontianak dengan pilihan terlengkap dan harga terbaik.</p>
+      <div class="hero-buttons">
+        <button class="btn-red" onclick="document.getElementById('pilih-mobil').scrollIntoView({behavior: 'smooth'})">Jelajahi Sekarang</button>
+        <button class="btn-outline-white" id="heroSpkBtn">Rekomendasi SPK</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Carousel Promo -->
-  {databasePromo.length > 0 && (
-    <div class="carousel-container">
-      <button class="carousel-btn prev-btn" id="prevPromoBtn">&#10094;</button>
-      <button class="carousel-btn next-btn" id="nextPromoBtn">&#10095;</button>
+  <div class="container">
+    <!-- FILTER SECTION -->
+    <div class="filter-section" id="pilih-mobil">
+      <h2>Pilih Mobil</h2>
+      <p class="subtitle">Harga Terbaik di Pontianak</p>
       
-      <div class="carousel-track" id="carouselTrack">
-        {databasePromo.map((promo) => (
-          <div class="carousel-slide">
-            <img src={promo.promo_gambar || '/default-promo.png'} alt={promo.promo_judul} />
-            <div class="carousel-caption">
-              <span>{promo.promo_kategori}</span>
-              <h2>{promo.promo_judul}</h2>
-              <p>Berlaku hingga: {new Date(promo.promo_berakhir).toLocaleDateString('id-ID')}</p>
-              <a href={`/promo/${promo.promo_id}`} class="btn-promo-detail">Lihat Detail Promo</a>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div class="carousel-dots" id="carouselDots">
-        {databasePromo.map((_, index) => (
-          <span class={`dot ${index === 0 ? 'active' : ''}`} data-index={index}></span>
-        ))}
-      </div>
-    </div>
-  )}
-
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h2>Produk Kami</h2>
-    <span id="spkStatusInfo" style="font-size: 14px; color: #2ed573; font-weight: bold;"></span>
-  </div>
-
-  <!-- Grid Mobil -->
-  <div class="grid" id="carGrid">
-    {databaseMobil.map((mobil) => {
-      let images = [];
-      try {
-        images = JSON.parse(mobil.gambar_mobil || '[]');
-      } catch {
-        images = mobil.gambar_mobil ? [mobil.gambar_mobil] : ['/default-car.png'];
-      }
-      if (images.length === 0) images = ['/default-car.png'];
-
-      return (
-        <div class="card" 
-             data-id={mobil.id_mobil}
-             data-nama={`${mobil.brand_mobil} ${mobil.model_mobil}`.toLowerCase()} 
-             data-harga={mobil.harga || 0} 
-             data-brand={mobil.brand_mobil || ''}
-             data-kategori={mobil.kategori_mobil || ''}
-             data-transmisi={mobil.transmisi || ''}
-             data-pajak={mobil.status_pajak || ''}
-             data-km={mobil.jumlah_km || 0}
-             data-tahun={mobil.tahun_mobil || 2020}
-             data-cc={mobil.kapasitas_mesin || 1500}>
-          
-          <span class="badge-spk" style="display: none;"></span>
-
-          <div class="card-slider">
-            <div class="card-track" data-index="0">
-              {images.map(img => (
-                <div class="card-slide">
-                  <img src={img} alt={mobil.model_mobil} />
-                </div>
-              ))}
-            </div>
-            {images.length > 1 && (
-              <>
-                <button class="card-btn card-prev" onclick="moveCardSlide(this, -1)">&#10094;</button>
-                <button class="card-btn card-next" onclick="moveCardSlide(this, 1)">&#10095;</button>
-              </>
-            )}
-          </div>
-          
-          <h3 style="margin-top: 0;">{mobil.brand_mobil} {mobil.model_mobil}</h3>
-          
-          <p style="font-size: 18px; color: #ff4757; margin: 5px 0;">
-            <strong>{formatMaskedPrice(mobil.harga, mobil.digit_tampil)}</strong>
-          </p>
-
-          <p style="font-size: 13px; color: #555;">
-            {mobil.kategori_mobil} | {mobil.transmisi} | {mobil.tahun_mobil || '-'} ({mobil.kapasitas_mesin || '-'} cc)<br/>
-            KM: {Number(mobil.jumlah_km || 0).toLocaleString('id-ID')} km | Pajak: {mobil.status_pajak}
-          </p>
-          <a href={`/details/${mobil.id_mobil}`} class="btn">Lihat Detail</a>
+      <div class="search-toolbar">
+        <div class="search-box">
+          <input type="text" id="searchName" placeholder="🔍 Cari nama atau model mobil..." />
         </div>
-      );
-    })}
-  </div>
-
-  <!-- Modal Filter -->
-  <div id="filterModal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Sort & Filter Katalog</h3>
-        <button id="closeModalBtn" class="close-btn">&times;</button>
+        <button id="openSpkModalBtn" class="btn-spk-trigger">✨ Fitur Rekomendasi (SPK)</button>
       </div>
 
-      <div class="form-group">
-        <label>Urutkan Berdasarkan</label>
-        <select id="sortPrice" class="form-control">
-          <option value="default">Default</option>
-          <option value="asc">Harga Terendah - Tertinggi</option>
-          <option value="desc">Harga Tertinggi - Terendah</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Rentang Harga (Rp)</label>
-        <div class="price-range">
-          <input type="number" id="minPrice" class="form-control" placeholder="Min" value={minPriceDB} />
-          <input type="number" id="maxPrice" class="form-control" placeholder="Max" value={maxPriceDB} />
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label>Merek</label>
+          <select id="brandFilter">
+            <option value="all">Semua Merek</option>
+            {uniqueBrands.map(brand => <option value={brand}>{brand}</option>)}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Kategori</label>
+          <select id="categoryFilter">
+            <option value="all">Semua Kategori</option>
+            {uniqueCategories.map(cat => <option value={cat}>{cat}</option>)}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Transmisi</label>
+          <select id="transmissionFilter">
+            <option value="all">Semua Transmisi</option>
+            {uniqueTransmissions.map(trans => <option value={trans}>{trans}</option>)}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Urutkan</label>
+          <select id="sortPrice">
+            <option value="default">Paling Relevan</option>
+            <option value="asc">Harga Terendah</option>
+            <option value="desc">Harga Tertinggi</option>
+          </select>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Merek (Brand)</label>
-        <select id="brandFilter" class="form-control">
-          <option value="all">Semua Merek</option>
-          {uniqueBrands.map(brand => <option value={brand}>{brand}</option>)}
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Kategori</label>
-        <select id="categoryFilter" class="form-control">
-          <option value="all">Semua Kategori</option>
-          {uniqueCategories.map(cat => <option value={cat}>{cat}</option>)}
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Transmisi</label>
-        <select id="transmissionFilter" class="form-control">
-          <option value="all">Semua Transmisi</option>
-          {uniqueTransmissions.map(trans => <option value={trans}>{trans}</option>)}
-        </select>
-      </div>
-
-      <div class="form-group checkbox-group">
-        <input type="checkbox" id="taxFilterCheckbox" />
-        <label for="taxFilterCheckbox">Pajak Hidup Only</label>
-      </div>
-
-      <div class="modal-footer">
-        <button id="resetBtn" class="btn-reset">Reset Filter</button>
-        <button id="applyBtn" class="btn-apply">Terapkan Filter</button>
+      <div class="filter-grid-secondary">
+        <div class="filter-group">
+          <label>Harga Minimum (Rp)</label>
+          <input type="number" id="minPrice" placeholder="Min" value={minPriceDB} />
+        </div>
+        <div class="filter-group">
+          <label>Harga Maksimum (Rp)</label>
+          <input type="number" id="maxPrice" placeholder="Max" value={maxPriceDB} />
+        </div>
+        <label class="tax-checkbox-inline" for="taxFilterCheckbox">
+          <input type="checkbox" id="taxFilterCheckbox" />
+          <span>Pajak Hidup Only</span>
+        </label>
+        <button id="resetBtn" class="btn-reset-inline">Reset</button>
       </div>
     </div>
+
+    <!-- CAR GRID -->
+    <div class="catalog-header">
+      <div class="result-count"><span id="countDisplay">{databaseMobil.length}</span> mobil ditemukan</div>
+      <span id="spkStatusInfo" class="spk-status-info"></span>
+    </div>
+
+    <div class="car-grid" id="carGrid">
+      {databaseMobil.map((mobil) => {
+        let images = [];
+        try {
+          images = JSON.parse(mobil.gambar_mobil || '[]');
+        } catch {
+          images = mobil.gambar_mobil ? [mobil.gambar_mobil] : ['/default-car.png'];
+        }
+        if (images.length === 0) images = ['/default-car.png'];
+
+        return (
+          <div class="car-card"
+               data-id={mobil.id_mobil}
+               data-nama={`${mobil.brand_mobil} ${mobil.model_mobil}`.toLowerCase()}
+               data-harga={mobil.harga || 0}
+               data-brand={mobil.brand_mobil || ''}
+               data-kategori={mobil.kategori_mobil || ''}
+               data-transmisi={mobil.transmisi || ''}
+               data-pajak={mobil.status_pajak || ''}
+               data-km={mobil.jumlah_km || 0}
+               data-tahun={mobil.tahun_mobil || 2020}
+               data-cc={mobil.kapasitas_mesin || 1500}>
+            
+            <div class="card-img card-slider">
+              <span class="card-tag">{mobil.brand_mobil} | {mobil.kategori_mobil}</span>
+              <span class="badge-spk"></span>
+
+              <div class="card-track" data-index="0">
+                {images.map(img => (
+                  <div class="card-slide">
+                    <img src={img} alt={mobil.model_mobil} />
+                  </div>
+                ))}
+              </div>
+
+              {images.length > 1 && (
+                <>
+                  <button type="button" class="card-btn card-prev" onclick="moveCardSlide(this, -1)">&#10094;</button>
+                  <button type="button" class="card-btn card-next" onclick="moveCardSlide(this, 1)">&#10095;</button>
+                </>
+              )}
+            </div>
+            
+            <div class="card-content">
+              <h3 class="card-title">{mobil.brand_mobil} {mobil.model_mobil}</h3>
+              <p class="card-price">Mulai dari {formatMaskedPrice(mobil.harga, mobil.digit_tampil)}</p>
+              <p class="card-meta">
+                Tahun: {mobil.tahun_mobil || '-'} | {mobil.kapasitas_mesin || '-'} cc<br/>
+                KM: {Number(mobil.jumlah_km || 0).toLocaleString('id-ID')} km | Pajak: {mobil.status_pajak || '-'}
+              </p>
+              
+              <div class="card-footer">
+                <span class="card-spec">{mobil.transmisi}</span>
+                <a href={`/details/${mobil.id_mobil}`} class="btn-detail">Detail Mobil</a>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- PROMO SECTION -->
+    {databasePromo.length > 0 && (
+      <div class="promo-section">
+        <div class="promo-header">
+          <div>
+            <h2>Promo Terbaru</h2>
+            <p>Penawaran eksklusif dari Samudera Jaya Group</p>
+          </div>
+        </div>
+        
+        <div class="promo-grid">
+          {databasePromo.slice(0, 4).map((promo) => (
+            <a href={`/promo/${promo.promo_id}`} class="promo-card">
+              <img src={promo.promo_gambar || '/default-promo.png'} alt={promo.promo_judul} />
+              <div class="promo-body">
+                <span class="promo-date">Berlaku s/d: {new Date(promo.promo_berakhir).toLocaleDateString('id-ID')}</span>
+                <h4 class="promo-title">{promo.promo_judul}</h4>
+              </div>
+            </a>
+          ))}
+        </div>
+        <a href="/promo" class="btn-all-promo">Lihat Semua Promo</a>
+      </div>
+    )}
   </div>
 
-  <!-- Modal SPK -->
+  <!-- MODAL SPK -->
   <div id="spkModal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Fitur Rekomendasi</h3>
+        <h3>Fitur Rekomendasi Mobil (SPK)</h3>
         <button id="closeSpkModalBtn" class="close-btn">&times;</button>
       </div>
 
       <div style="margin-bottom: 15px;">
         <button type="button" id="toggleFilterDropdown" class="accordion-header">
-          <span>1. Filter (Opsional)</span>
+          <span>1. Filter Tambahan (Opsional)</span>
           <span id="accordionArrow">&#9660;</span>
         </button>
         <div id="filterDropdownBody" class="accordion-body">
@@ -367,7 +466,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
           </div>
 
           <div class="form-group">
-            <label>Rentang Kilometres (KM)</label>
+            <label>Rentang Kilometer (KM)</label>
             <div class="price-range">
               <input type="number" id="spkMinKm" class="form-control" placeholder="Min KM" value={minKmDB} />
               <input type="number" id="spkMaxKm" class="form-control" placeholder="Max KM" value={maxKmDB} />
@@ -406,7 +505,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
       </div>
 
       <div class="spk-section-title">2. Pilih Prioritas</div>
-      <p style="font-size: 12px; color: #666; margin-top: -5px;">Klik kriteria di bawah untuk memasukkannya ke urutan prioritas sesuai keinginan. Klik ulang untuk menghapus.</p>
+      <p style="font-size: 12px; color: #666;">Klik kriteria di bawah sesuai urutan prioritas yang diinginkan. Klik ulang untuk menghapus.</p>
 
       <div class="criteria-picker">
         <div class="criterion-chip" data-key="harga">Harga</div>
@@ -415,32 +514,76 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
         <div class="criterion-chip" data-key="cc">Kapasitas Mesin (CC)</div>
       </div>
 
-      <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-top: 10px;">
-        <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px; color: #333;">Urutan Prioritas Terpilih:</div>
-        <div id="prioritySlotsList" style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #555;">
+      <div class="priority-box">
+        <div style="font-weight: 700; margin-bottom: 8px; font-size: 13px;">Urutan Prioritas Terpilih:</div>
+        <div id="prioritySlotsList" style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #555;">
           <span style="color: #888; font-style: italic;">Belum ada kriteria yang dipilih (klik chip di atas).</span>
         </div>
       </div>
 
-      <div id="ccPreferenceGroup" class="form-group" style="display: none; margin-top: 15px; background: #eef2f7; padding: 12px; border-radius: 6px; border: 1px solid #d0d7de;">
-        <label style="color: #333; margin-bottom: 6px;">Preferensi Kapasitas Mesin (CC):</label>
-        <div style="display: flex; gap: 20px;">
-          <label style="font-weight: normal; cursor: pointer; font-size: 13px;"><input type="radio" name="ccPreference" value="besar" checked> Besar (Benefit / Tenaga Lebih)</label>
-          <label style="font-weight: normal; cursor: pointer; font-size: 13px;"><input type="radio" name="ccPreference" value="kecil"> Kecil (Cost / Lebih Irit)</label>
+      <div id="ccPreferenceGroup" class="cc-pref-box">
+        <label style="display: block; font-weight: 600; font-size: 13px; margin-bottom: 8px;">Preferensi Kapasitas Mesin (CC):</label>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <label style="font-weight: 400; cursor: pointer; font-size: 13px;">
+            <input type="radio" name="ccPreference" value="besar" checked> Besar (Benefit / Tenaga Lebih)
+          </label>
+          <label style="font-weight: 400; cursor: pointer; font-size: 13px;">
+            <input type="radio" name="ccPreference" value="kecil"> Kecil (Cost / Lebih Irit)
+          </label>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button id="resetSpkBtn" class="btn-reset">Reset SPK</button>
+        <button id="resetSpkBtn" class="btn-reset-modal">Reset SPK</button>
         <button id="runSpkBtn" class="btn-spk-submit">Cari Mobil (SPK)</button>
       </div>
     </div>
   </div>
 
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo"><span>Samudera</span> Jaya Group</div>
+        <p class="footer-desc">Dealer Toyota Andalan Anda di Pontianak, Kalimantan Barat. Melayani pembelian, servis, dan suku cadang resmi dengan pelayanan terbaik sejak 2010.</p>
+      </div>
+      <div>
+        <h4>Layanan Pelanggan</h4>
+        <ul>
+          <li><a href="#pilih-mobil">Beli Mobil</a></li>
+          <li><a href="#">Dapatkan Penawaran</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Purna Jual</h4>
+        <ul>
+          <li><a href="#">Bodi & Cat</a></li>
+          <li><a href="#">Suku Cadang & Aksesoris</a></li>
+          <li><a href="#">Layanan Kendaraan</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kontak Kami</h4>
+        <ul>
+          <li>📍 Jl. A.Yani No. 123, Pontianak, Kalimantan Barat</li>
+          <li>📞 0812-3456-7890</li>
+          <li>🕒 Senin - Sabtu: 08:00 - 17:00</li>
+        </ul>
+        <a href="#" class="btn-whatsapp">💬 Chat via WhatsApp</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Samudera Jaya Group. All rights reserved.</p>
+      <p>Kebijakan Privasi & Syarat Ketentuan</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT FILTER & SPK MOORA -->
   <script>
     // @ts-nocheck
     import { filterEligibleItems, rankItemsWithMoora } from '../lib/spk.js';
 
+    // Slider Gambar di Card
     window.moveCardSlide = function(button, direction) {
       const slider = button.closest('.card-slider');
       if (!slider) return;
@@ -448,60 +591,97 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
       if (!track) return;
       const slides = track.querySelectorAll('.card-slide');
       let index = parseInt(track.getAttribute('data-index') || '0', 10);
-      
+
       index = (index + direction + slides.length) % slides.length;
       track.setAttribute('data-index', String(index));
       track.style.transform = `translateX(-${index * 100}%)`;
     };
 
-    // Carousel Promo
-    const track = document.getElementById('carouselTrack');
-    const slides = document.querySelectorAll('.carousel-slide');
-    const dots = document.querySelectorAll('.dot');
-    const prevBtn = document.getElementById('prevPromoBtn');
-    const nextBtn = document.getElementById('nextPromoBtn');
-    let currentIndex = 0;
+    // Elemen Filter Inline
+    const searchInput = document.getElementById('searchName');
+    const brandFilter = document.getElementById('brandFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const transmissionFilter = document.getElementById('transmissionFilter');
+    const sortPrice = document.getElementById('sortPrice');
+    const minPrice = document.getElementById('minPrice');
+    const maxPrice = document.getElementById('maxPrice');
+    const taxFilterCheckbox = document.getElementById('taxFilterCheckbox');
 
-    function updateCarousel(index) {
-      if (!track || slides.length === 0) return;
-      currentIndex = (index + slides.length) % slides.length;
-      track.style.transform = `translateX(-${currentIndex * 100}%)`;
-      dots.forEach((dot, i) => dot.classList.toggle('active', i === currentIndex));
+    const carGrid = document.getElementById('carGrid');
+    const countDisplay = document.getElementById('countDisplay');
+    const spkStatusInfo = document.getElementById('spkStatusInfo');
+    const cardsArray = Array.from(document.querySelectorAll('.car-card'));
+
+    function applyFilters() {
+      if (!carGrid) return;
+
+      const searchValue = (searchInput?.value || '').toLowerCase();
+      const brandVal = brandFilter?.value || 'all';
+      const catVal = categoryFilter?.value || 'all';
+      const transVal = transmissionFilter?.value || 'all';
+      const sortVal = sortPrice?.value || 'default';
+      const minVal = parseFloat(minPrice?.value || '') || 0;
+      const maxVal = parseFloat(maxPrice?.value || '') || Infinity;
+      const isTaxHidupOnly = Boolean(taxFilterCheckbox?.checked);
+
+      let visibleCount = 0;
+
+      cardsArray.forEach(card => {
+        const nama = card.getAttribute('data-nama') || '';
+        const harga = parseFloat(card.getAttribute('data-harga') || '0');
+        const brand = card.getAttribute('data-brand') || '';
+        const cat = card.getAttribute('data-kategori') || '';
+        const trans = card.getAttribute('data-transmisi') || '';
+        const tax = card.getAttribute('data-pajak') || '';
+
+        const match =
+          nama.includes(searchValue) &&
+          harga >= minVal &&
+          harga <= maxVal &&
+          (brandVal === 'all' || brand === brandVal) &&
+          (catVal === 'all' || cat === catVal) &&
+          (transVal === 'all' || trans === transVal) &&
+          (!isTaxHidupOnly || tax.toLowerCase().includes('hidup'));
+
+        card.style.display = match ? 'flex' : 'none';
+        if (match) visibleCount++;
+      });
+
+      if (countDisplay) countDisplay.textContent = String(visibleCount);
+
+      if (sortVal !== 'default') {
+        cardsArray.sort((a, b) => {
+          const hargaA = parseFloat(a.getAttribute('data-harga') || '0');
+          const hargaB = parseFloat(b.getAttribute('data-harga') || '0');
+          return sortVal === 'asc' ? hargaA - hargaB : hargaB - hargaA;
+        });
+      }
+
+      carGrid.innerHTML = '';
+      cardsArray.forEach(card => carGrid.appendChild(card));
     }
 
-    nextBtn?.addEventListener('click', () => updateCarousel(currentIndex + 1));
-    prevBtn?.addEventListener('click', () => updateCarousel(currentIndex - 1));
-    dots.forEach(dot => {
-      dot.addEventListener('click', (e) => {
-        const idx = parseInt(e.currentTarget.getAttribute('data-index') || '0', 10);
-        updateCarousel(idx);
-      });
-    });
-    if (slides.length > 1) setInterval(() => updateCarousel(currentIndex + 1), 5000);
+    searchInput?.addEventListener('input', applyFilters);
+    brandFilter?.addEventListener('change', applyFilters);
+    categoryFilter?.addEventListener('change', applyFilters);
+    transmissionFilter?.addEventListener('change', applyFilters);
+    sortPrice?.addEventListener('change', applyFilters);
+    minPrice?.addEventListener('input', applyFilters);
+    maxPrice?.addEventListener('input', applyFilters);
+    taxFilterCheckbox?.addEventListener('change', applyFilters);
+    document.getElementById('resetBtn')?.addEventListener('click', () => location.reload());
 
-    // Kontrol Modal
-    const filterModal = document.getElementById('filterModal');
+    // Kontrol Modal SPK
     const spkModal = document.getElementById('spkModal');
+    const openSpkModal = () => { if (spkModal) spkModal.style.display = 'flex'; };
+    const closeSpkModal = () => { if (spkModal) spkModal.style.display = 'none'; };
 
-    document.getElementById('openModalBtn')?.addEventListener('click', () => {
-      if (filterModal) filterModal.style.display = 'flex';
-    });
-    document.getElementById('closeModalBtn')?.addEventListener('click', () => {
-      if (filterModal) filterModal.style.display = 'none';
-    });
-    document.getElementById('openSpkModalBtn')?.addEventListener('click', () => {
-      if (spkModal) spkModal.style.display = 'flex';
-    });
-    document.getElementById('closeSpkModalBtn')?.addEventListener('click', () => {
-      if (spkModal) spkModal.style.display = 'none';
-    });
+    document.getElementById('openSpkModalBtn')?.addEventListener('click', openSpkModal);
+    document.getElementById('heroSpkBtn')?.addEventListener('click', openSpkModal);
+    document.getElementById('closeSpkModalBtn')?.addEventListener('click', closeSpkModal);
+    window.addEventListener('click', (e) => { if (e.target === spkModal) closeSpkModal(); });
 
-    window.addEventListener('click', (e) => {
-      if (e.target === filterModal && filterModal) filterModal.style.display = 'none';
-      if (e.target === spkModal && spkModal) spkModal.style.display = 'none';
-    });
-
-    //  Filter
+    // Accordion Filter di Modal SPK
     const toggleFilterDropdown = document.getElementById('toggleFilterDropdown');
     const filterDropdownBody = document.getElementById('filterDropdownBody');
     const accordionArrow = document.getElementById('accordionArrow');
@@ -511,6 +691,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
       if (accordionArrow) accordionArrow.innerHTML = isOpen ? '&#9650;' : '&#9660;';
     });
 
+    // Pilihan Prioritas SPK
     let chosenPriorities = [];
     const criterionNames = {
       harga: 'Harga',
@@ -562,71 +743,7 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
       });
     });
 
-    const searchInput = document.getElementById('searchName');
-    const sortPrice = document.getElementById('sortPrice');
-    const minPrice = document.getElementById('minPrice');
-    const maxPrice = document.getElementById('maxPrice');
-    const brandFilter = document.getElementById('brandFilter');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const transmissionFilter = document.getElementById('transmissionFilter');
-    const taxFilterCheckbox = document.getElementById('taxFilterCheckbox');
-    const carGrid = document.getElementById('carGrid');
-    const cardsArray = Array.from(document.querySelectorAll('.card'));
-
-    function applyFilters() {
-      if (!carGrid) return;
-
-      const searchValue = (searchInput?.value || '').toLowerCase();
-      const sortValue = sortPrice?.value || 'default';
-      const minVal = parseFloat(minPrice?.value || '') || 0;
-      const maxVal = parseFloat(maxPrice?.value || '') || Infinity;
-      const brandVal = brandFilter?.value || 'all';
-      const catVal = categoryFilter?.value || 'all';
-      const transVal = transmissionFilter?.value || 'all';
-      const isTaxHidupOnly = Boolean(taxFilterCheckbox?.checked);
-
-      cardsArray.forEach(card => {
-        const nama = card.getAttribute('data-nama') || '';
-        const harga = parseFloat(card.getAttribute('data-harga') || '0');
-        const brand = card.getAttribute('data-brand') || '';
-        const cat = card.getAttribute('data-kategori') || '';
-        const trans = card.getAttribute('data-transmisi') || '';
-        const tax = card.getAttribute('data-pajak') || '';
-
-        const match =
-          nama.includes(searchValue) &&
-          harga >= minVal &&
-          harga <= maxVal &&
-          (brandVal === 'all' || brand === brandVal) &&
-          (catVal === 'all' || cat === catVal) &&
-          (transVal === 'all' || trans === transVal) &&
-          (!isTaxHidupOnly || tax.toLowerCase().includes('hidup'));
-
-        card.style.display = match ? 'flex' : 'none';
-      });
-
-      if (sortValue !== 'default') {
-        cardsArray.sort((a, b) => {
-          const hargaA = parseFloat(a.getAttribute('data-harga') || '0');
-          const hargaB = parseFloat(b.getAttribute('data-harga') || '0');
-          return sortValue === 'asc' ? hargaA - hargaB : hargaB - hargaA;
-        });
-      }
-
-      carGrid.innerHTML = '';
-      cardsArray.forEach(card => carGrid.appendChild(card));
-    }
-
-    document.getElementById('applyBtn')?.addEventListener('click', () => {
-      applyFilters();
-      if (filterModal) filterModal.style.display = 'none';
-    });
-    searchInput?.addEventListener('input', applyFilters);
-    document.getElementById('resetBtn')?.addEventListener('click', () => location.reload());
-
-    // Proses SPK
-    const spkStatusInfo = document.getElementById('spkStatusInfo');
-
+    // Proses SPK MOORA
     document.getElementById('runSpkBtn')?.addEventListener('click', () => {
       if (chosenPriorities.length === 0) {
         alert('Harap pilih minimal 1 kriteria prioritas untuk SPK.');
@@ -681,17 +798,17 @@ function formatMaskedPrice(harga, visibleDigits = 3) {
           const badge = card.querySelector('.badge-spk');
           if (badge) {
             badge.style.display = 'inline-block';
-            badge.innerText = `#${index + 1} SPK (Skor: ${entry.yi.toFixed(4)})`;
+            badge.innerText = `#${index + 1} SPK (${entry.yi.toFixed(4)})`;
           }
 
           carGrid.appendChild(card);
         });
       }
 
-      if (spkStatusInfo) {
-        spkStatusInfo.innerText = `Menampilkan ${ranked.length} Rekomendasi SPK Terbaik`;
-      }
-      if (spkModal) spkModal.style.display = 'none';
+      if (countDisplay) countDisplay.textContent = String(ranked.length);
+      if (spkStatusInfo) spkStatusInfo.innerText = `Menampilkan ${ranked.length} Rekomendasi SPK Terbaik`;
+      closeSpkModal();
+      document.getElementById('pilih-mobil')?.scrollIntoView({ behavior: 'smooth' });
     });
 
     document.getElementById('resetSpkBtn')?.addEventListener('click', () => location.reload());

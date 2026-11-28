@@ -31,50 +31,456 @@ const totalPromo = promoRows[0].total;
 <html lang="id">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Admin - CV Samudera Jaya Group</title>
-  <style>
-    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
-    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
-    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
-    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
-    .sidebar a:hover { color: white; }
-    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; }
-    
-    .main-content { flex: 1; padding: 40px; box-sizing: border-box; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-    .stat-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .stat-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; }
-    .stat-card p { margin: 0; font-size: 24px; font-weight: bold; color: #333; }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style is:global>
+    :root {
+      --primary: #b91c1c;
+      --primary-hover: #991b1b;
+      --primary-dark: #450a0a;
+      --bg-page: #f8f9fa;
+      --bg-sidebar: #1a0404;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      line-height: 1.5;
+    }
+
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, #2b0606 0%, #140808 100%);
+      color: var(--white);
+      height: 100vh;
+      padding: 28px 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      padding-bottom: 22px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-decoration: none;
+    }
+
+    .brand-title .brand-main {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ef4444;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title .brand-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1.8px;
+    }
+
+    .sidebar h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 12px;
+      font-weight: 700;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar a {
+      color: rgba(255, 255, 255, 0.75);
+      text-decoration: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .sidebar a:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: var(--white);
+    }
+
+    .sidebar a.active {
+      background-color: var(--primary);
+      color: var(--white);
+      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.35);
+    }
+
+    .sidebar .logout {
+      margin-top: auto;
+      color: #fca5a5;
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      justify-content: center;
+    }
+
+    .sidebar .logout:hover {
+      background-color: #dc2626;
+      color: var(--white);
+      border-color: #dc2626;
+    }
+
+    /* ================= MAIN CONTENT ================= */
+    .main-content {
+      margin-left: 260px;
+      flex: 1;
+      padding: 40px 48px 64px;
+      min-width: 0;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header-title h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .header-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .admin-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      color: var(--text-muted);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+
+    .admin-pill strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+    }
+
+    /* ================= STATS GRID ================= */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      padding: 28px;
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary) 0%, #ef4444 100%);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .stat-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background-color: #fef2f2;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-value {
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 14px;
+    }
+
+    .stat-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      transition: gap 0.2s ease, color 0.2s ease;
+    }
+
+    .stat-link:hover {
+      color: var(--primary-hover);
+      gap: 10px;
+    }
+
+    /* ================= QUICK ACTIONS ================= */
+    .quick-section {
+      background: var(--white);
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      padding: 28px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    .quick-section h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .quick-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      color: var(--white);
+      padding: 12px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.22);
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--white);
+      color: var(--text-main);
+      border: 1.5px solid var(--border-color);
+      padding: 12px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background-color: #fef2f2;
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 20px;
+      }
+
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .sidebar .logout {
+        margin-top: 14px;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 28px 20px 48px;
+      }
+
+      .header {
+        align-items: flex-start;
+      }
+
+      .header-title h1 {
+        font-size: 24px;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="sidebar">
-    <h2>Admin Panel</h2>
-    <a href="/admin/dashboard">Dashboard</a>
-    <a href="/admin/mobil">Kelola Mobil</a>
-    <a href="/admin/promo">Kelola Promo</a>
-    <a href="/admin/logout" class="logout">Logout</a>
-  </div>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/admin/dashboard" class="brand-title">
+        <span class="brand-main">SAMUDERA JAYA</span>
+        <span class="brand-sub">GROUP</span>
+      </a>
+      <h2>Admin Panel</h2>
+    </div>
 
-  <div class="main-content">
+    <nav class="sidebar-nav">
+      <a href="/admin/dashboard" class="active">Dashboard</a>
+      <a href="/admin/mobil">Kelola Mobil</a>
+      <a href="/admin/promo">Kelola Promo</a>
+    </nav>
+
+    <a href="/admin/logout" class="logout">Logout</a>
+  </aside>
+
+  <main class="main-content">
     <div class="header">
-      <h1>Dashboard</h1>
-      <p>Selamat datang, <strong>{currentAdmin.username}</strong></p>
+      <div class="header-title">
+        <h1>Dashboard</h1>
+        <p class="header-subtitle">Ringkasan data katalog kendaraan dan promo aktif CV Samudera Jaya Group.</p>
+      </div>
+
+      <div class="admin-pill">
+        <span class="status-dot"></span>
+        <span>Selamat datang, <strong>{currentAdmin.username}</strong></span>
+      </div>
     </div>
 
     <div class="stats-grid">
       <div class="stat-card">
-        <h3>Total Mobil Terdaftar</h3>
-        <p>{totalMobil}</p>
+        <div class="stat-top">
+          <h3>Total Mobil Terdaftar</h3>
+          <div class="stat-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+              <circle cx="7" cy="17" r="2"/>
+              <path d="M9 17h6"/>
+              <circle cx="17" cy="17" r="2"/>
+            </svg>
+          </div>
+        </div>
+        <p class="stat-value">{totalMobil}</p>
+        <a href="/admin/mobil" class="stat-link">Kelola katalog mobil &rarr;</a>
       </div>
+
       <div class="stat-card">
-        <h3>Total Promo Aktif</h3>
-        <p>{totalPromo}</p>
+        <div class="stat-top">
+          <h3>Total Promo Aktif</h3>
+          <div class="stat-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+              <path d="M7 7h.01"/>
+            </svg>
+          </div>
+        </div>
+        <p class="stat-value">{totalPromo}</p>
+        <a href="/admin/promo" class="stat-link">Kelola informasi promo &rarr;</a>
       </div>
     </div>
-  </div>
+
+    <section class="quick-section">
+      <h2>Aksi Cepat</h2>
+      <p>Akses langsung menu utama untuk mengelola unit kendaraan dan penawaran terbaru.</p>
+      <div class="quick-actions">
+        <a href="/admin/mobil" class="btn-primary">Kelola Data Mobil</a>
+        <a href="/admin/promo/create" class="btn-outline">+ Tambah Promo Baru</a>
+        <a href="/admin/promo" class="btn-outline">Lihat Daftar Promo</a>
+      </div>
+    </section>
+  </main>
 
 </body>
 </html>

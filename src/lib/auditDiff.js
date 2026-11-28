@@ -1,5 +1,3 @@
-// src/lib/auditDiff.js
-
 const FIELD_LABELS = {
 	brand_mobil: "Brand Mobil",
 	model_mobil: "Model Mobil",
@@ -75,7 +73,6 @@ export function buildFieldDiff(sebelumRaw, sesudahRaw) {
 
 	if (!sebelum && !sesudah) return [];
 
-	// Jika hanya ada data_sesudah (misalnya CREATE)
 	if (!sebelum && sesudah && typeof sesudah === "object") {
 		return Object.keys(sesudah)
 			.filter((k) => k !== "id_mobil")
@@ -90,7 +87,6 @@ export function buildFieldDiff(sebelumRaw, sesudahRaw) {
 			}));
 	}
 
-	// Jika hanya ada data_sebelum (misalnya DELETE_PERMANENT)
 	if (sebelum && !sesudah && typeof sebelum === "object") {
 		return Object.keys(sebelum)
 			.filter((k) => k !== "id_mobil")
@@ -105,7 +101,6 @@ export function buildFieldDiff(sebelumRaw, sesudahRaw) {
 			}));
 	}
 
-	// Jika keduanya ada (misalnya UPDATE atau MARK_MOBIL_SOLD)
 	const allKeys = Array.from(
 		new Set([...Object.keys(sebelum || {}), ...Object.keys(sesudah || {})]),
 	).filter((k) => k !== "id_mobil");

@@ -96,93 +96,670 @@ const displayLogs = [...filteredLogs].reverse();
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Audit Log Aktivitas Admin - Admin Panel</title>
-  <style>
-    body { font-family: sans-serif; margin: 0; background: #f9f9f9; display: flex; }
-    .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; position: fixed; display: flex; flex-direction: column; }
-    .sidebar h2 { font-size: 18px; margin-bottom: 30px; }
-    .sidebar a { color: #ddd; text-decoration: none; padding: 10px 0; display: block; font-size: 15px; }
-    .sidebar a:hover, .sidebar a.active { color: white; font-weight: bold; }
-    .sidebar .logout { margin-top: auto; color: #ff4757; font-weight: bold; display: block; }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Log Aktivitas Admin - Admin Panel | Samudera Jaya Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style is:global>
+    :root {
+      --primary: #b91c1c;
+      --primary-hover: #991b1b;
+      --primary-dark: #450a0a;
+      --bg-page: #f8f9fa;
+      --bg-sidebar: #1a0404;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --white: #ffffff;
+    }
 
-    .main-content { margin-left: 250px; flex: 1; padding: 40px; box-sizing: border-box; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    .filter-card { background: white; padding: 18px 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end; }
-    .filter-group label { display: block; font-size: 12px; font-weight: bold; color: #374151; margin-bottom: 5px; }
-    .filter-control { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box; background: white; }
-    .filter-actions { display: flex; gap: 8px; align-items: center; }
-    .btn-filter { background: #0076ff; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
-    .btn-filter:hover { background: #005bb5; }
-    .btn-reset { background: #e5e7eb; color: #374151; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; }
-    .btn-reset:hover { background: #d1d5db; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      line-height: 1.5;
+    }
 
-    .integrity-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; font-weight: bold; }
-    .integrity-bad { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; font-weight: bold; }
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, #2b0606 0%, #140808 100%);
+      color: var(--white);
+      height: 100vh;
+      padding: 28px 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 100;
+    }
 
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
-    th { background: #f1f2f6; color: #333; }
+    .sidebar-brand {
+      padding-bottom: 22px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-    .badge-aksi { background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; }
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-decoration: none;
+    }
 
-    .changed-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-    .pill-changed { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: bold; }
+    .brand-title .brand-main {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ef4444;
+      letter-spacing: 0.5px;
+    }
 
-    .status-valid { color: #15803d; font-weight: bold; }
-    .status-tampered { color: #dc2626; font-weight: bold; }
+    .brand-title .brand-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1.8px;
+    }
 
-    details summary { cursor: pointer; color: #0076ff; font-weight: bold; font-size: 12px; }
-    .diff-panel { margin-top: 8px; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; min-width: 320px; max-width: 440px; }
+    .sidebar h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 12px;
+      font-weight: 700;
+    }
 
-    .diff-row { padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
-    .diff-row:last-child { margin-bottom: 0; }
-    .diff-row.is-changed { background: #fffbeb; border: 1px solid #f59e0b; }
-    .diff-row.is-same { background: #f3f4f6; color: #6b7280; }
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
 
-    .diff-label { font-weight: bold; color: #111827; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-    .tag-hi { background: #f59e0b; color: white; font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+    .sidebar a {
+      color: rgba(255, 255, 255, 0.75);
+      text-decoration: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+    }
 
-    .val-before { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; text-decoration: line-through; display: inline-block; margin-top: 2px; word-break: break-word; }
-    .val-after { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 2px; word-break: break-word; }
+    .sidebar a:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: var(--white);
+    }
 
-    .img-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .img-strip img { width: 58px; height: 42px; object-fit: cover; border-radius: 4px; border: 1px solid #d1d5db; }
+    .sidebar a.active {
+      background-color: var(--primary);
+      color: var(--white);
+      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.35);
+    }
 
-    .toggle-same-btn { margin-top: 8px; background: #e5e7eb; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold; color: #374151; }
-    .unchanged-group.hidden { display: none; }
+    .sidebar .logout {
+      margin-top: auto;
+      color: #fca5a5;
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      justify-content: center;
+    }
 
-    .empty-state { background: white; padding: 30px; text-align: center; border-radius: 8px; color: #666; border: 1px solid #eee; }
+    .sidebar .logout:hover {
+      background-color: #dc2626;
+      color: var(--white);
+      border-color: #dc2626;
+    }
+
+    /* ================= MAIN CONTENT ================= */
+    .main-content {
+      margin-left: 260px;
+      flex: 1;
+      padding: 40px 48px 64px;
+      min-width: 0;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header-title h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .header-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .log-counter {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--text-muted);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    .log-counter strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    /* ================= INTEGRITY BANNER ================= */
+    .integrity-ok,
+    .integrity-bad {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .integrity-ok {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-left: 4px solid #16a34a;
+    }
+
+    .integrity-bad {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--primary);
+    }
+
+    /* ================= FILTER CARD ================= */
+    .filter-card {
+      background: var(--white);
+      padding: 22px 24px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 24px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .filter-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text-main);
+      background-color: var(--white);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .filter-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-filter {
+      flex: 1;
+      background: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-filter:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-reset {
+      background: var(--white);
+      color: var(--text-main);
+      border: 1.5px solid var(--border-color);
+      text-decoration: none;
+      padding: 9px 15px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13.5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .btn-reset:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    /* ================= TABLE CARD ================= */
+    .table-card {
+      background: var(--white);
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th, td {
+      padding: 15px 16px;
+      text-align: left;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: #f9fafb;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr:hover {
+      background-color: #fafafa;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .log-id {
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .log-time {
+      color: #4b5563;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .admin-name {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .admin-ip {
+      color: var(--text-muted);
+      font-size: 11.5px;
+      margin-top: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .badge-aksi {
+      background: #fef2f2;
+      color: var(--primary);
+      border: 1px solid #fecaca;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 11px;
+      display: inline-block;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+
+    .ringkasan-text {
+      color: var(--text-main);
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .changed-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .pill-changed {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* ================= STATUS INTEGRITAS ================= */
+    .status-valid,
+    .status-tampered {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-valid {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-tampered {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    /* ================= DIFF DETAILS ================= */
+    details summary {
+      cursor: pointer;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 12.5px;
+      user-select: none;
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: #fef2f2;
+      transition: background-color 0.2s ease;
+    }
+
+    details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details summary::before {
+      content: "▸";
+      font-size: 11px;
+      transition: transform 0.2s ease;
+    }
+
+    details[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    details summary:hover {
+      background: #fee2e2;
+    }
+
+    .diff-panel {
+      margin-top: 10px;
+      background: #f9fafb;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      min-width: 310px;
+      max-width: 440px;
+    }
+
+    .diff-row {
+      padding: 9px 11px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .diff-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .diff-row.is-changed {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+    }
+
+    .diff-row.is-same {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    .diff-label {
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tag-hi {
+      background: #f59e0b;
+      color: var(--white);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      letter-spacing: 0.4px;
+    }
+
+    .val-before {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-decoration: line-through;
+      display: inline-block;
+      margin-top: 2px;
+      word-break: break-word;
+    }
+
+    .val-after {
+      background: #dcfce7;
+      color: #166534;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+
+    .img-strip {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .img-strip img {
+      width: 60px;
+      height: 44px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: var(--white);
+    }
+
+    .toggle-same-btn {
+      margin-top: 8px;
+      background: var(--white);
+      border: 1px solid #d1d5db;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 11.5px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #374151;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-same-btn:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+    }
+
+    .unchanged-group.hidden {
+      display: none;
+    }
+
+    .empty-state {
+      background: var(--white);
+      padding: 56px 24px;
+      text-align: center;
+      border-radius: 18px;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      font-size: 15px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 20px;
+      }
+
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .sidebar .logout {
+        margin-top: 14px;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 28px 20px 48px;
+      }
+
+      .header {
+        align-items: flex-start;
+      }
+
+      .header-title h1 {
+        font-size: 24px;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="sidebar">
-    <h2>Admin Panel</h2>
-    <a href="/admin/dashboard">Dashboard</a>
-    <a href="/admin/mobil">Kelola Mobil</a>
-    <a href="/admin/mobil/arsip">Arsip Terjual</a>
-    <a href="/admin/promo">Kelola Promo</a>
-    <a href="/admin/log" class="active">Audit Log</a>
-    <a href="/admin/logout" class="logout">Logout</a>
-  </div>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/admin/dashboard" class="brand-title">
+        <span class="brand-main">SAMUDERA JAYA</span>
+        <span class="brand-sub">GROUP</span>
+      </a>
+      <h2>Admin Panel</h2>
+    </div>
 
-  <div class="main-content">
+    <nav class="sidebar-nav">
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/mobil">Kelola Mobil</a>
+      <a href="/admin/mobil/arsip">Arsip Terjual</a>
+      <a href="/admin/promo">Kelola Promo</a>
+      <a href="/admin/log" class="active">Audit Log</a>
+    </nav>
+
+    <a href="/admin/logout" class="logout">Logout</a>
+  </aside>
+
+  <main class="main-content">
     <div class="header">
-      <h1>Audit Log</h1>
-      <span style="font-size: 13px; color: #555;">
+      <div class="header-title">
+        <h1>Audit Log</h1>
+        <p class="header-subtitle">Riwayat aktivitas admin dan verifikasi integritas rantai hash secara otomatis.</p>
+      </div>
+      <div class="log-counter">
         Menampilkan <strong>{displayLogs.length}</strong> dari <strong>{verifiedLogs.length}</strong> catatan
-      </span>
+      </div>
     </div>
 
     {isAllIntact ? (
       <div class="integrity-ok">
-        &#10003; Integritas Rantai Log Terverifikasi ({verifiedLogs.length} catatan utuh, tidak ada manipulasi data).
+        <span>&#10003; Integritas Rantai Log Terverifikasi ({verifiedLogs.length} catatan utuh, tidak ada manipulasi data).</span>
       </div>
     ) : (
       <div class="integrity-bad">
-        &#9888; PERINGATAN: Terdeteksi ketidaksesuaian hash pada riwayat log! Ada data yang dimodifikasi di luar sistem.
+        <span>&#9888; PERINGATAN: Terdeteksi ketidaksesuaian hash pada riwayat log! Ada data yang dimodifikasi di luar sistem.</span>
       </div>
     )}
 
@@ -237,114 +814,118 @@ const displayLogs = [...filteredLogs].reverse();
           : 'Belum ada aktivitas admin yang tercatat di log.'}
       </div>
     ) : (
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Waktu</th>
-            <th>Admin</th>
-            <th>Aksi</th>
-            <th>Ringkasan &amp; Field Berubah</th>
-            <th>Detail Perubahan</th>
-            <th>Integritas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {displayLogs.map((log, idx) => (
-            <tr>
-              <td>{log.id_log}</td>
-              <td>{new Date(log.waktu_kejadian).toLocaleString('id-ID')}</td>
-              <td>
-                <strong>{log.username}</strong>
-                {log.ip_address && <div style="color:#64748b; font-size:11px;">{log.ip_address}</div>}
-              </td>
-              <td><span class="badge-aksi">{log.aksi}</span></td>
-              <td>
-                <div>{log.ringkasan}</div>
-                {log.changedFields.length > 0 && (
-                  <div class="changed-pills">
-                    {log.changedFields.map((f) => (
-                      <span class="pill-changed">{f.label}</span>
-                    ))}
-                  </div>
-                )}
-              </td>
-              <td>
-                {log.diffs.length > 0 ? (
-                  <details open={log.aksi === 'UPDATE_MOBIL' && idx < 3}>
-                    <summary>Lihat Rincian ({log.changedFields.length} field berubah)</summary>
-                    <div class="diff-panel">
-                      {log.changedFields.map((d) => (
-                        <div class="diff-row is-changed">
-                          <div class="diff-label">
-                            <span>{d.label}</span>
-                            <span class="tag-hi">DIUBAH</span>
-                          </div>
-                          {log.aksi === 'UPDATE_MOBIL' && (
-                            <div><span class="val-before">Sebelum: {d.before}</span></div>
-                          )}
-                          <div><span class="val-after">Sesudah: {d.after}</span></div>
-
-                          {d.key === 'gambar_mobil' && (d.beforeImages.length > 0 || d.afterImages.length > 0) && (
-                            <div style="margin-top:6px;">
-                              {d.beforeImages.length > 0 && (
-                                <div>
-                                  <small style="color:#991b1b;">Foto lama:</small>
-                                  <div class="img-strip">
-                                    {d.beforeImages.map((src) => <img src={src} alt="Foto lama" />)}
-                                  </div>
-                                </div>
+      <div class="table-card">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Waktu</th>
+                <th>Admin</th>
+                <th>Aksi</th>
+                <th>Ringkasan &amp; Field Berubah</th>
+                <th>Detail Perubahan</th>
+                <th>Integritas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayLogs.map((log, idx) => (
+                <tr>
+                  <td class="log-id">#{log.id_log}</td>
+                  <td class="log-time">{new Date(log.waktu_kejadian).toLocaleString('id-ID')}</td>
+                  <td>
+                    <div class="admin-name">{log.username}</div>
+                    {log.ip_address && <div class="admin-ip">{log.ip_address}</div>}
+                  </td>
+                  <td><span class="badge-aksi">{log.aksi}</span></td>
+                  <td>
+                    <div class="ringkasan-text">{log.ringkasan}</div>
+                    {log.changedFields.length > 0 && (
+                      <div class="changed-pills">
+                        {log.changedFields.map((f) => (
+                          <span class="pill-changed">{f.label}</span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    {log.diffs.length > 0 ? (
+                      <details open={log.aksi === 'UPDATE_MOBIL' && idx < 3}>
+                        <summary>Lihat Rincian ({log.changedFields.length} field berubah)</summary>
+                        <div class="diff-panel">
+                          {log.changedFields.map((d) => (
+                            <div class="diff-row is-changed">
+                              <div class="diff-label">
+                                <span>{d.label}</span>
+                                <span class="tag-hi">DIUBAH</span>
+                              </div>
+                              {log.aksi === 'UPDATE_MOBIL' && (
+                                <div><span class="val-before">Sebelum: {d.before}</span></div>
                               )}
-                              {d.afterImages.length > 0 && (
-                                <div style="margin-top:4px;">
-                                  <small style="color:#166534;">Foto baru:</small>
-                                  <div class="img-strip">
-                                    {d.afterImages.map((src) => <img src={src} alt="Foto baru" />)}
-                                  </div>
+                              <div><span class="val-after">Sesudah: {d.after}</span></div>
+
+                              {d.key === 'gambar_mobil' && (d.beforeImages.length > 0 || d.afterImages.length > 0) && (
+                                <div style="margin-top:8px;">
+                                  {d.beforeImages.length > 0 && (
+                                    <div>
+                                      <small style="color:#991b1b; font-weight:600;">Foto lama:</small>
+                                      <div class="img-strip">
+                                        {d.beforeImages.map((src) => <img src={src} alt="Foto lama" />)}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {d.afterImages.length > 0 && (
+                                    <div style="margin-top:6px;">
+                                      <small style="color:#166534; font-weight:600;">Foto baru:</small>
+                                      <div class="img-strip">
+                                        {d.afterImages.map((src) => <img src={src} alt="Foto baru" />)}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
+                          ))}
+
+                          {log.unchangedFields.length > 0 && (
+                            <div>
+                              <button
+                                type="button"
+                                class="toggle-same-btn"
+                                onclick={`toggleSameFields('same-${log.id_log}')`}
+                              >
+                                + {log.unchangedFields.length} field tidak berubah
+                              </button>
+                              <div id={`same-${log.id_log}`} class="unchanged-group hidden" style="margin-top:8px;">
+                                {log.unchangedFields.map((d) => (
+                                  <div class="diff-row is-same">
+                                    <strong>{d.label}:</strong> {d.after}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      ))}
-
-                      {log.unchangedFields.length > 0 && (
-                        <div>
-                          <button
-                            type="button"
-                            class="toggle-same-btn"
-                            onclick={`toggleSameFields('same-${log.id_log}')`}
-                          >
-                            + {log.unchangedFields.length} field tidak berubah
-                          </button>
-                          <div id={`same-${log.id_log}`} class="unchanged-group hidden" style="margin-top:6px;">
-                            {log.unchangedFields.map((d) => (
-                              <div class="diff-row is-same">
-                                <strong>{d.label}:</strong> {d.after}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                ) : (
-                  <span style="color:#94a3b8;">-</span>
-                )}
-              </td>
-              <td>
-                {log.isValid ? (
-                  <span class="status-valid" title={`Hash: ${log.current_hash}`}>Valid</span>
-                ) : (
-                  <span class="status-tampered" title={`Hash tidak cocok: ${log.current_hash}`}>Rusak!</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                      </details>
+                    ) : (
+                      <span style="color:#9ca3af;">-</span>
+                    )}
+                  </td>
+                  <td>
+                    {log.isValid ? (
+                      <span class="status-valid" title={`Hash: ${log.current_hash}`}>Valid</span>
+                    ) : (
+                      <span class="status-tampered" title={`Hash tidak cocok: ${log.current_hash}`}>Rusak!</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     )}
-  </div>
+  </main>
 
   <script>
     function toggleSameFields(targetId: string) {
